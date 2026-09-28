@@ -6,6 +6,8 @@
 
 ## 克隆与启动
 
+直接下载完整工程：[完整项目 ZIP 发布页](https://github.com/esyfxy/godot-tactical-study/releases/tag/study-2026-09-28)。选择附件 `GodotTacticalStudy-project-20260928.zip`，解压后用 Godot 4.7.2 导入 `project.godot`。附件含真实模型数据，无需另外下载 LFS；这是编辑器工程，不是独立安装程序。
+
 安装 Git、Git LFS 和 Godot 4.7.2，然后执行：
 
 ```sh
