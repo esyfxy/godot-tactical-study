@@ -1,0 +1,28 @@
+# Godot editor cache and local state
+.godot/
+.import/
+export.cfg
+export_credentials.cfg
+*.tmp
+*.log
+*.bak
+
+# Original game assets and extracted data remain local.
+# The initial repository contains code/scenes only.
+/assets/
+/asset_index.json
+/GITHUB_UPLOAD.md
+
+# Build outputs, captures, tools and credentials
+/build/
+/exports/
+*.exe
+*.dll
+*.pck
+*.zip
+*.7z
+*.mp4
+*.mkv
+.env
+.env.*
+!.env.example
