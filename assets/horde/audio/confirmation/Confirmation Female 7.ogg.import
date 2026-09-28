@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://cbpq65pu6iw4x"
+path="res://.godot/imported/Confirmation Female 7.ogg-17483b622a88ff4dd65a49e078a9b33c.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/horde/audio/confirmation/Confirmation Female 7.ogg"
+dest_files=["res://.godot/imported/Confirmation Female 7.ogg-17483b622a88ff4dd65a49e078a9b33c.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

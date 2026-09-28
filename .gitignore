@@ -7,9 +7,8 @@ export_credentials.cfg
 *.log
 *.bak
 
-# Original game assets and extracted data remain local.
-# The initial repository contains code/scenes only.
-/assets/
+# Conversion reference notes are not runtime dependencies.
+/assets/reference_unity/
 /asset_index.json
 /GITHUB_UPLOAD.md
 

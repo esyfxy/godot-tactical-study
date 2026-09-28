@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://g25onyl7pcf7"
+path="res://.godot/imported/Confirmation MaleOld 9.ogg-0b0b9cee5a51e5454ffbb055aece050d.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/horde/audio/confirmation/Confirmation MaleOld 9.ogg"
+dest_files=["res://.godot/imported/Confirmation MaleOld 9.ogg-0b0b9cee5a51e5454ffbb055aece050d.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

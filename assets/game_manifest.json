@@ -1,0 +1,261 @@
+{
+  "source": "AssetRipper ExportedProject/Assets",
+  "mission_count": 15,
+  "missions": [
+    {
+      "id": "airport",
+      "unity_scene": "RebelCops/Grids/Airport.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/airport",
+      "grid_size": [
+        55,
+        105
+      ],
+      "game_objects": 229,
+      "mesh_objects": 167,
+      "unresolved_mesh_object_names": [
+        "AirplaneBox",
+        "Fog"
+      ],
+      "godot_static_scene_status": "import_tested"
+    },
+    {
+      "id": "bank",
+      "unity_scene": "RebelCops/Grids/Bank.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/bank",
+      "grid_size": [
+        60,
+        40
+      ],
+      "game_objects": 195,
+      "mesh_objects": 133,
+      "unresolved_mesh_object_names": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Plane (1)",
+        "Fog"
+      ],
+      "godot_static_scene_status": "integrated"
+    },
+    {
+      "id": "bigrift",
+      "unity_scene": "RebelCops/Grids/BigRift.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/bigrift",
+      "grid_size": [
+        65,
+        75
+      ],
+      "game_objects": 250,
+      "mesh_objects": 179,
+      "unresolved_mesh_object_names": [
+        "Fog"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "bookstore",
+      "unity_scene": "RebelCops/Grids/BookStore.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/bookstore",
+      "grid_size": [
+        75,
+        70
+      ],
+      "game_objects": 183,
+      "mesh_objects": 129,
+      "unresolved_mesh_object_names": [
+        "Fog"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "casino",
+      "unity_scene": "RebelCops/Grids/Casino.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/casino",
+      "grid_size": [
+        56,
+        68
+      ],
+      "game_objects": 172,
+      "mesh_objects": 120,
+      "unresolved_mesh_object_names": [
+        "Fog"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "constructionsite",
+      "unity_scene": "RebelCops/Grids/ConstructionSite.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/constructionsite",
+      "grid_size": [
+        70,
+        80
+      ],
+      "game_objects": 294,
+      "mesh_objects": 238,
+      "unresolved_mesh_object_names": [
+        "Fog",
+        "TacticsMeshPartRemover (6)",
+        "TacticsMeshPartRemover",
+        "TacticsMeshPartRemover (7)",
+        "TacticsMeshPartRemover (2)",
+        "TacticsMeshPartRemover (12)",
+        "TacticsMeshPartRemover (9)",
+        "TacticsMeshPartRemover (1)",
+        "TacticsMeshPartRemover (10)",
+        "TacticsMeshPartRemover (4)",
+        "TacticsMeshPartRemover (5)",
+        "TacticsMeshPartRemover (11)",
+        "TacticsMeshPartRemover (8)",
+        "TacticsMeshPartRemover (3)"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "estate",
+      "unity_scene": "RebelCops/Grids/Estate.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/estate",
+      "grid_size": [
+        190,
+        250
+      ],
+      "game_objects": 1230,
+      "mesh_objects": 1013,
+      "unresolved_mesh_object_names": [
+        "Fog"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "finalmission",
+      "unity_scene": "RebelCops/Grids/FinalMission.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/finalmission",
+      "grid_size": [
+        105,
+        82
+      ],
+      "game_objects": 267,
+      "mesh_objects": 214,
+      "unresolved_mesh_object_names": [
+        "Fog"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "hordemode",
+      "unity_scene": "RebelCops/Grids/HordeMode.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/hordemode",
+      "grid_size": [
+        85,
+        95
+      ],
+      "game_objects": 380,
+      "mesh_objects": 308,
+      "unresolved_mesh_object_names": [
+        "Fog"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "mall",
+      "unity_scene": "RebelCops/Grids/Mall.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/mall",
+      "grid_size": [
+        78,
+        128
+      ],
+      "game_objects": 615,
+      "mesh_objects": 552,
+      "unresolved_mesh_object_names": [
+        "Fog"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "mines",
+      "unity_scene": "RebelCops/Grids/Mines.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/mines",
+      "grid_size": [
+        53,
+        54
+      ],
+      "game_objects": 136,
+      "mesh_objects": 73,
+      "unresolved_mesh_object_names": [
+        "Plane",
+        "Fog"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "photostudio",
+      "unity_scene": "RebelCops/Grids/PhotoStudio.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/photostudio",
+      "grid_size": [
+        60,
+        50
+      ],
+      "game_objects": 480,
+      "mesh_objects": 436,
+      "unresolved_mesh_object_names": [
+        "Fog"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "photostudiosnowy",
+      "unity_scene": "RebelCops/Grids/PhotoStudioSnowy.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/photostudiosnowy",
+      "grid_size": [
+        60,
+        50
+      ],
+      "game_objects": 275,
+      "mesh_objects": 228,
+      "unresolved_mesh_object_names": [
+        "Fog"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "railways",
+      "unity_scene": "RebelCops/Grids/Railways.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/railways",
+      "grid_size": [
+        117,
+        86
+      ],
+      "game_objects": 963,
+      "mesh_objects": 802,
+      "unresolved_mesh_object_names": [
+        "RedLight",
+        "GreenLight",
+        "RedLight",
+        "GreenLight",
+        "GreenLight",
+        "GreenLight",
+        "RedLight",
+        "Fog",
+        "RedLight"
+      ],
+      "godot_static_scene_status": "not_converted"
+    },
+    {
+      "id": "trailerpark",
+      "unity_scene": "RebelCops/Grids/TrailerPark.unity",
+      "bundle": "StreamingAssets/AssetBundles/Scenes/trailerpark",
+      "grid_size": [
+        258,
+        188
+      ],
+      "game_objects": 646,
+      "mesh_objects": 535,
+      "unresolved_mesh_object_names": [
+        "Fog"
+      ],
+      "godot_static_scene_status": "not_converted"
+    }
+  ]
+}

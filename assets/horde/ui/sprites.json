@@ -1,0 +1,702 @@
+{
+  "Trade": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4.png",
+    "rect": [
+      2376.0,
+      1508.0,
+      128.0,
+      128.0
+    ],
+    "source": "Sprite/Trade.asset"
+  },
+  "MedkitSmall": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      1320.0,
+      1000.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/MedkitSmall.asset"
+  },
+  "MedkitBig": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4.png",
+    "rect": [
+      264.0,
+      1528.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/MedkitBig.asset"
+  },
+  "SwitchWeapon": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      0.0,
+      1264.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/SwitchWeapon.asset"
+  },
+  "PassAmmo": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      2376.0,
+      1644.0,
+      140.0,
+      140.0
+    ],
+    "source": "Sprite/PassAmmo.asset"
+  },
+  "Reload": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TactcisMarkers-2048x2048-fmt4_0.png",
+    "rect": [
+      624.0,
+      1432.0,
+      200.0,
+      200.0
+    ],
+    "source": "Sprite/Reload.asset"
+  },
+  "Grenade": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TactcisMarkers-2048x2048-fmt4_0.png",
+    "rect": [
+      208.0,
+      1640.0,
+      200.0,
+      200.0
+    ],
+    "source": "Sprite/Grenade.asset"
+  },
+  "Knife": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      1056.0,
+      736.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Knife.asset"
+  },
+  "Helmet": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_0.png",
+    "rect": [
+      1584.0,
+      208.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Helmet.asset"
+  },
+  "Armor": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_0.png",
+    "rect": [
+      528.0,
+      1000.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Armor.asset"
+  },
+  "Death": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      1899.0513,
+      892.0761399999999,
+      123.921936,
+      139.89713
+    ],
+    "source": "Sprite/Death.asset"
+  },
+  "InjuredHand": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      1193.0363,
+      61.07605000000004,
+      188.93697,
+      171.84775
+    ],
+    "source": "Sprite/InjuredHand.asset"
+  },
+  "InjuredLeg": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      1609.0762,
+      222.07605000000004,
+      193.88097,
+      171.84775
+    ],
+    "source": "Sprite/InjuredLeg.asset"
+  },
+  "TorsoInjury": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      1328.0762,
+      1659.07610153,
+      415.854,
+      388.84778
+    ],
+    "source": "Sprite/TorsoInjury.asset"
+  },
+  "HandInjury": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TactcisMarkers-2048x2048-fmt4_0.png",
+    "rect": [
+      832.0,
+      1432.0,
+      200.0,
+      200.0
+    ],
+    "source": "Sprite/HandInjury.asset"
+  },
+  "LegInjury": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TactcisMarkers-2048x2048-fmt4_0.png",
+    "rect": [
+      1248.0,
+      1432.0,
+      200.0,
+      200.0
+    ],
+    "source": "Sprite/LegInjury.asset"
+  },
+  "AimedShot": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TactcisMarkers-2048x2048-fmt4_0.png",
+    "rect": [
+      208.0,
+      1848.0,
+      200.0,
+      200.0
+    ],
+    "source": "Sprite/AimedShot.asset"
+  },
+  "OrderToSurrender": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      1584.0,
+      1528.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/OrderToSurrender.asset"
+  },
+  "SeeFar": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      2904.0,
+      1792.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/SeeFar.asset"
+  },
+  "Fortification": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      792.0,
+      1792.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Fortification.asset"
+  },
+  "SecondCheek": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      2112.0,
+      1292.0,
+      110.0,
+      110.0
+    ],
+    "source": "Sprite/SecondCheek.asset"
+  },
+  "AdrenalineRush": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TactcisMarkers-2048x2048-fmt4.png",
+    "rect": [
+      416.0,
+      1016.0,
+      200.0,
+      200.0
+    ],
+    "source": "Sprite/AdrenalineRush.asset"
+  },
+  "Bide": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      528.0,
+      472.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Bide.asset"
+  },
+  "SmoothOps": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      2112.0,
+      1410.0,
+      110.0,
+      110.0
+    ],
+    "source": "Sprite/SmoothOps.asset"
+  },
+  "Resilience": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      792.0,
+      1264.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Resilience.asset"
+  },
+  "Revolver": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_0.png",
+    "rect": [
+      264.0,
+      208.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Revolver.asset"
+  },
+  "Rifle": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_0.png",
+    "rect": [
+      792.0,
+      1528.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Rifle.asset"
+  },
+  "Glock": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      1320.0,
+      1528.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Glock.asset"
+  },
+  "Shotgun": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_0.png",
+    "rect": [
+      1056.0,
+      1528.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Shotgun.asset"
+  },
+  "Taser": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TactcisMarkers-2048x2048-fmt4_0.png",
+    "rect": [
+      1456.0,
+      1848.0,
+      200.0,
+      200.0
+    ],
+    "source": "Sprite/Taser.asset"
+  },
+  "RebelPoint": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-Cards-512x128-fmt4.png",
+    "rect": [
+      136.05972,
+      16.076120000000003,
+      64.86415,
+      79.84776
+    ],
+    "source": "Sprite/RebelPoint.asset"
+  },
+  "Menu": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-InputIcons-1024x1024-fmt4_2.png",
+    "rect": [
+      819.02673,
+      546.02674,
+      71.9465,
+      71.9465
+    ],
+    "source": "Sprite/Menu.asset"
+  },
+  "Options": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4.png",
+    "rect": [
+      2117.0,
+      1785.07611,
+      81.0,
+      71.84776
+    ],
+    "source": "Sprite/Options.asset"
+  },
+  "Spellbook": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      1183.0762,
+      1442.0761400000001,
+      83.87257,
+      85.84776
+    ],
+    "source": "Sprite/Spellbook.asset"
+  },
+  "radio": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TactcisUI (Group 0)-512x256-fmt4_0.png",
+    "rect": [
+      230.0,
+      145.0,
+      46.0,
+      111.0
+    ],
+    "source": "Sprite/radio.asset"
+  },
+  "Name": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-Briefing (Group 1)-2048x4096-fmt29.png",
+    "rect": [
+      813.02673,
+      2421.07602,
+      849.94653,
+      260.84778
+    ],
+    "source": "Sprite/Name.asset"
+  },
+  "LevelHex": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-UI (Group 3)-512x512-fmt4.png",
+    "rect": [
+      0.0,
+      6.0,
+      185.0,
+      160.0
+    ],
+    "source": "Sprite/LevelHex.asset"
+  },
+  "ActionPoint": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 1)-64x64-fmt12.png",
+    "rect": [
+      0.026751041,
+      25.026754018,
+      38.946495,
+      38.946495
+    ],
+    "source": "Sprite/ActionPoint.asset"
+  },
+  "Button Turn": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      0.0,
+      391.0,
+      553.0,
+      179.0
+    ],
+    "source": "Sprite/Button Turn.asset"
+  },
+  "Slots": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-Briefing (Group 1)-2048x4096-fmt29_0.png",
+    "rect": [
+      0.05131668,
+      1571.0,
+      657.87256,
+      105.0
+    ],
+    "source": "Sprite/Slots.asset"
+  },
+  "Gun": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      264.0,
+      1792.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Gun.asset"
+  },
+  "Arrest": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      1848.0,
+      1000.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/Arrest.asset"
+  },
+  "MisterFreeze": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_0.png",
+    "rect": [
+      792.0,
+      208.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/MisterFreeze.asset"
+  },
+  "ShootHead": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      792.0,
+      736.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/ShootHead.asset"
+  },
+  "ShootTorso": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      2640.0,
+      1792.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/ShootTorso.asset"
+  },
+  "ShootHand": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      1848.0,
+      1264.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/ShootHand.asset"
+  },
+  "ShootLeg": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      528.0,
+      1264.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/ShootLeg.asset"
+  },
+  "Interact": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TactcisMarkers-2048x2048-fmt4_0.png",
+    "rect": [
+      1456.0,
+      1640.0,
+      200.0,
+      200.0
+    ],
+    "source": "Sprite/Interact.asset"
+  },
+  "ForceOpen": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TactcisMarkers-2048x2048-fmt4_0.png",
+    "rect": [
+      0.0,
+      1016.0,
+      200.0,
+      200.0
+    ],
+    "source": "Sprite/ForceOpen.asset"
+  },
+  "icon_noise": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      2364.0269,
+      1905.026749018,
+      61.89713,
+      142.9465
+    ],
+    "source": "Sprite/icon_noise.asset"
+  },
+  "icon_no_alarm": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      632.0,
+      1601.0,
+      77.0,
+      79.0
+    ],
+    "source": "Sprite/icon_no_alarm.asset"
+  },
+  "SpellBook_Accuracy": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_2.png",
+    "rect": [
+      1609.0762,
+      402.07605,
+      198.84775,
+      198.84775
+    ],
+    "source": "Sprite/SpellBook_Accuracy.asset"
+  },
+  "SpellBook_Haste": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_2.png",
+    "rect": [
+      1711.0267,
+      113.02680000000011,
+      264.89713,
+      83.9465
+    ],
+    "source": "Sprite/SpellBook_Haste.asset"
+  },
+  "SpellBook_Invisibility": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_2.png",
+    "rect": [
+      1558.0762,
+      36.0513600000001,
+      144.84775,
+      177.92194
+    ],
+    "source": "Sprite/SpellBook_Invisibility.asset"
+  },
+  "SpellBook_ShockAndAwe": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_2.png",
+    "rect": [
+      1303.0762,
+      1183.07615,
+      195.84775,
+      179.84775
+    ],
+    "source": "Sprite/SpellBook_ShockAndAwe.asset"
+  },
+  "SpellBook_Overwatch": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      416.02676,
+      117.02667000000002,
+      244.93697,
+      161.89713
+    ],
+    "source": "assetbundles/tacticsshared/ui/spellbook/SpellBook_Overwatch.asset"
+  },
+  "pause_body": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-PauseMenu-2048x2048-fmt29_0.png",
+    "rect": [
+      0.0,
+      488.0,
+      977.0,
+      97.0
+    ],
+    "source": "Sprite/pause_body.asset"
+  },
+  "pause_header": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-PauseMenu-2048x2048-fmt29_0.png",
+    "rect": [
+      0.0,
+      239.0,
+      393.0,
+      241.0
+    ],
+    "source": "Sprite/pause_header.asset"
+  },
+  "Banner": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-BankRobbery-512x512-fmt29.png",
+    "rect": [
+      0.0,
+      157.0,
+      497.0,
+      355.0
+    ],
+    "source": "Sprite/Banner.asset"
+  },
+  "HalfCover": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsCover-1024x512-fmt12.png",
+    "rect": [
+      0.07611847,
+      85.076117528,
+      379.84778,
+      426.89713
+    ],
+    "source": "Sprite/HalfCover.asset"
+  },
+  "FullCover": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsCover-1024x512-fmt12.png",
+    "rect": [
+      388.0761,
+      85.076117528,
+      379.84778,
+      426.89713
+    ],
+    "source": "Sprite/FullCover.asset"
+  },
+  "GlockClip": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      1584.0,
+      736.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/GlockClip.asset"
+  },
+  "RevolverClip": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      1320.0,
+      736.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/RevolverClip.asset"
+  },
+  "RifleBullet": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      0.0,
+      1792.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/RifleBullet.asset"
+  },
+  "ShotgunBullet": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsActions-4096x2048-fmt4_1.png",
+    "rect": [
+      1056.0,
+      1264.0,
+      256.0,
+      256.0
+    ],
+    "source": "Sprite/ShotgunBullet.asset"
+  },
+  "Body": {
+    "atlas": "res://assets/horde/ui/Body.png",
+    "rect": [
+      0,
+      0,
+      714,
+      1432
+    ],
+    "source": "Sprite/Body.asset"
+  },
+  "paper": {
+    "atlas": "res://assets/horde/ui/paper.png",
+    "rect": [
+      0,
+      0,
+      1900,
+      964
+    ],
+    "source": "Sprite/paper.asset"
+  },
+  "Chance Background BodyParts": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      2113.0,
+      1928.0,
+      120.0,
+      120.0
+    ],
+    "source": "Sprite/Chance Background BodyParts.asset"
+  },
+  "Chance Fill BodyParts": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      1969.0,
+      1361.0,
+      120.0,
+      120.0
+    ],
+    "source": "Sprite/Chance Fill BodyParts.asset"
+  },
+  "Chance Point": {
+    "atlas": "res://assets/horde/ui/SpriteAtlasTexture-TacticsUI (Group 0)-4096x2048-fmt4_1.png",
+    "rect": [
+      2518.0,
+      2016.0,
+      32.0,
+      32.0
+    ],
+    "source": "Sprite/Chance Point.asset"
+  }
+}

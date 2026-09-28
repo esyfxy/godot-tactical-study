@@ -1,0 +1,67 @@
+{
+  "source": "RebelCops/Grids/Bank.unity; TextDatabase zh-CN index 6; TacticsItems.LockPick=18",
+  "notes": [
+    {
+      "x": 30,
+      "y": 22,
+      "id": "TutorialNote1",
+      "item": 18,
+      "title": "罗比",
+      "text": "罗比，我的忍耐已经到了极限。这该死的门永远打不开。我第三次给锁匠打电话了，他再一次答应会来，但他当然没有来。似乎自从老板叫苏耶夫的混蛋滚蛋后，我们就成了被抛弃的人。他们甚至不愿意再给我们送披萨了！瑞德叔叔给了我一套撬锁工具。他说，自从他偷鸡摸狗的青春岁月一去不复返后，它们就一直躺在车库里。但我完全不知道怎么使用撬锁工具。你试试看––也许你的运气不错。"
+    },
+    {
+      "x": 34,
+      "y": 26,
+      "id": "TutorialNote2",
+      "item": 0,
+      "title": "1111",
+      "text": "辛迪，事实证明谣言是真的！从空调坏掉的那天起，当没有顾客时，安迪就光着膀子坐在办公室里。你可以试着吓吓他，办公室的密码是1111，但不要告诉他是我说的秘密。祝你好运！"
+    }
+  ],
+  "doors": {
+    "1623": {
+      "password": "",
+      "required_item": 0
+    },
+    "1735": {
+      "password": "",
+      "required_item": 0
+    },
+    "2098": {
+      "password": "",
+      "required_item": 0
+    },
+    "2455": {
+      "password": "",
+      "required_item": 0
+    },
+    "2718": {
+      "password": "",
+      "required_item": 0
+    },
+    "2943": {
+      "password": "",
+      "required_item": 0
+    },
+    "2967": {
+      "password": "1111",
+      "required_item": 0
+    },
+    "3055": {
+      "password": "",
+      "required_item": 0
+    },
+    "2732": {
+      "password": "",
+      "required_item": 0
+    }
+  },
+  "texts": {
+    "TutorialNote1Title": "罗比",
+    "TutorialNote1": "罗比，我的忍耐已经到了极限。这该死的门永远打不开。我第三次给锁匠打电话了，他再一次答应会来，但他当然没有来。似乎自从老板叫苏耶夫的混蛋滚蛋后，我们就成了被抛弃的人。他们甚至不愿意再给我们送披萨了！瑞德叔叔给了我一套撬锁工具。他说，自从他偷鸡摸狗的青春岁月一去不复返后，它们就一直躺在车库里。但我完全不知道怎么使用撬锁工具。你试试看––也许你的运气不错。",
+    "TutorialNote2Title": "1111",
+    "TutorialNote2": "辛迪，事实证明谣言是真的！从空调坏掉的那天起，当没有顾客时，安迪就光着膀子坐在办公室里。你可以试着吓吓他，办公室的密码是1111，但不要告诉他是我说的秘密。祝你好运！",
+    "Tutorial_CameraControlPC": "要移动镜头，请使用WASD按钮或按住鼠标右键。",
+    "Tutorial_BankPassword": "什么？你把密码忘了？是1111啊。"
+  }
+}

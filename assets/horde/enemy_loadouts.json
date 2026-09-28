@@ -1,0 +1,79 @@
+{
+  "tiers": [
+    "HeavyGuy",
+    "Jigurda",
+    "FinalMissionEnemy"
+  ],
+  "random": [
+    "Criminal",
+    "EnemyCoatRandom",
+    "Bandit",
+    "Criminal",
+    "EnemyMale",
+    "EnemyNonMilitary",
+    "EnemyWithCap",
+    "EnemyFemale"
+  ],
+  "prefabs": {
+    "EnemyCoatRandom": {
+      "gun": "Revolver",
+      "melee": "",
+      "machinegun": false,
+      "source": "assetbundles/tacticsshared/enemies/coat/EnemyCoatRandom.prefab"
+    },
+    "EnemyFemale": {
+      "gun": "Revolver",
+      "melee": "",
+      "machinegun": false,
+      "source": "assetbundles/tacticsshared/enemies/female/EnemyFemale.prefab"
+    },
+    "Bandit": {
+      "gun": "Glock",
+      "melee": "",
+      "machinegun": false,
+      "source": "assetbundles/tacticsshared/enemies/new/Bandit.prefab"
+    },
+    "Criminal": {
+      "gun": "Glock",
+      "melee": "",
+      "machinegun": false,
+      "source": "assetbundles/tacticsshared/enemies/new/Criminal.prefab"
+    },
+    "FinalMissionEnemy": {
+      "gun": "Rifle",
+      "melee": "",
+      "machinegun": true,
+      "source": "assetbundles/tacticsshared/enemies/new/FinalMissionEnemy.prefab"
+    },
+    "HeavyGuy": {
+      "gun": "Shotgun",
+      "melee": "",
+      "machinegun": false,
+      "source": "assetbundles/tacticsshared/enemies/new/HeavyGuy.prefab"
+    },
+    "Jigurda": {
+      "gun": "",
+      "melee": "Ax",
+      "machinegun": false,
+      "source": "assetbundles/tacticsshared/enemies/new/Jigurda.prefab"
+    },
+    "EnemyMale": {
+      "gun": "Revolver",
+      "melee": "",
+      "machinegun": false,
+      "source": "assetbundles/tacticsshared/enemies/old/EnemyMale.prefab"
+    },
+    "EnemyNonMilitary": {
+      "gun": "Revolver",
+      "melee": "",
+      "machinegun": false,
+      "source": "assetbundles/tacticsshared/enemies/old/EnemyNonMilitary.prefab"
+    },
+    "EnemyWithCap": {
+      "gun": "Revolver",
+      "melee": "",
+      "machinegun": false,
+      "source": "assetbundles/tacticsshared/enemies/old/EnemyWithCap.prefab"
+    }
+  }
+}

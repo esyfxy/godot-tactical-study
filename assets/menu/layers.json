@@ -1,0 +1,350 @@
+[
+  {
+    "name": "Back",
+    "file": "res://assets/menu/59_Back.png",
+    "rect": [
+      -1.75,
+      1.0,
+      1923.5,
+      1078.0
+    ],
+    "parallax": 0.0,
+    "order": [
+      0
+    ],
+    "source": "Sprite\\Background.asset"
+  },
+  {
+    "name": "BomberMan",
+    "file": "res://assets/menu/60_BomberMan.png",
+    "rect": [
+      388.0,
+      210.75,
+      374.0,
+      644.5
+    ],
+    "parallax": 0.5,
+    "order": [
+      1
+    ],
+    "source": "Sprite\\Layer 1.asset"
+  },
+  {
+    "name": "Baba",
+    "file": "res://assets/menu/36_Baba.png",
+    "rect": [
+      564.5,
+      63.75,
+      459.0,
+      791.5
+    ],
+    "parallax": 0.4,
+    "order": [
+      2
+    ],
+    "source": "Sprite\\Layer 2.asset"
+  },
+  {
+    "name": "Military",
+    "file": "res://assets/menu/40_Military.png",
+    "rect": [
+      1134.75,
+      57.5,
+      590.5,
+      790.0
+    ],
+    "parallax": 0.4,
+    "order": [
+      3
+    ],
+    "source": "Sprite\\24.asset"
+  },
+  {
+    "name": "Zuev",
+    "file": "res://assets/menu/12_Zuev.png",
+    "rect": [
+      706.0,
+      0.0,
+      950.0,
+      896.0
+    ],
+    "parallax": 0.3,
+    "order": [
+      4
+    ],
+    "source": "Sprite\\Layer 3.asset"
+  },
+  {
+    "name": "Glow",
+    "file": "res://assets/menu/47_Glow.png",
+    "rect": [
+      670.0,
+      132.0,
+      986.0,
+      912.0
+    ],
+    "parallax": 0.2,
+    "order": [
+      5
+    ],
+    "source": "Sprite\\Layer 7.asset"
+  },
+  {
+    "name": "Gradient",
+    "file": "res://assets/menu/3_Gradient.png",
+    "rect": [
+      0.0,
+      455.0,
+      1923.5,
+      625.0
+    ],
+    "parallax": 0.0,
+    "order": [
+      6
+    ],
+    "source": "Sprite\\Layer 4.asset"
+  },
+  {
+    "name": "Cops",
+    "file": "res://assets/menu/22_Cops.png",
+    "rect": [
+      -3.5,
+      820.5,
+      1923.5,
+      259.5
+    ],
+    "parallax": 0.0,
+    "order": [
+      8
+    ],
+    "source": "Sprite\\Layer 6.asset"
+  },
+  {
+    "name": "CopsBack",
+    "file": "res://assets/menu/26_CopsBack.png",
+    "rect": [
+      979.4000100000001,
+      473.04999999999995,
+      382.0,
+      386.5
+    ],
+    "parallax": 0.02,
+    "order": [
+      8,
+      0
+    ],
+    "source": "Sprite\\Layer 8.asset"
+  },
+  {
+    "name": "CopsBack2",
+    "file": "res://assets/menu/1_CopsBack2.png",
+    "rect": [
+      929.45,
+      492.49996999999996,
+      495.5,
+      423.0
+    ],
+    "parallax": 0.01,
+    "order": [
+      8,
+      1
+    ],
+    "source": "Sprite\\Layer 9.asset"
+  },
+  {
+    "name": "CopFront",
+    "file": "res://assets/menu/7_CopFront.png",
+    "rect": [
+      1020.95,
+      470.64995999999996,
+      217.5,
+      503.5
+    ],
+    "parallax": 0.0,
+    "order": [
+      8,
+      2
+    ],
+    "source": "Sprite\\Layer 10.asset"
+  },
+  {
+    "name": "Enemy0",
+    "file": "res://assets/menu/80_Enemy0.png",
+    "rect": [
+      1492.5,
+      361.25,
+      431.0,
+      423.5
+    ],
+    "parallax": -0.1,
+    "order": [
+      9
+    ],
+    "source": "Sprite\\Layer 11.asset"
+  },
+  {
+    "name": "Enemy1",
+    "file": "res://assets/menu/11_Enemy1.png",
+    "rect": [
+      1513.0,
+      403.6,
+      410.5,
+      615.0
+    ],
+    "parallax": -0.2,
+    "order": [
+      10
+    ],
+    "source": "Sprite\\22.asset"
+  },
+  {
+    "name": "Enemy2",
+    "file": "res://assets/menu/43_Enemy2.png",
+    "rect": [
+      80.14999999999998,
+      330.05,
+      230.5,
+      263.5
+    ],
+    "parallax": -0.1,
+    "order": [
+      11
+    ],
+    "source": "Sprite\\21.asset"
+  },
+  {
+    "name": "Enemy3",
+    "file": "res://assets/menu/77_Enemy3.png",
+    "rect": [
+      1392.25,
+      555.5,
+      473.5,
+      524.5
+    ],
+    "parallax": -0.3,
+    "order": [
+      12
+    ],
+    "source": "Sprite\\23.asset"
+  },
+  {
+    "name": "Enemy4",
+    "file": "res://assets/menu/15_Enemy4.png",
+    "rect": [
+      -3.5,
+      381.75,
+      688.5,
+      584.5
+    ],
+    "parallax": -0.3,
+    "order": [
+      13
+    ],
+    "source": "Sprite\\Layer 12.asset"
+  },
+  {
+    "name": "Enemy5",
+    "file": "res://assets/menu/95_Enemy5.png",
+    "rect": [
+      45.25,
+      410.5,
+      767.5,
+      669.5
+    ],
+    "parallax": -0.4,
+    "order": [
+      14
+    ],
+    "source": "Sprite\\Layer 13.asset"
+  },
+  {
+    "name": "Enemy6",
+    "file": "res://assets/menu/18_Enemy6.png",
+    "rect": [
+      1673.5,
+      492.0,
+      246.5,
+      588.0
+    ],
+    "parallax": -0.4,
+    "order": [
+      15
+    ],
+    "source": "Sprite\\25.asset"
+  },
+  {
+    "name": "Enemy7",
+    "file": "res://assets/menu/64_Enemy7.png",
+    "rect": [
+      0.0,
+      512.5,
+      352.5,
+      567.5
+    ],
+    "parallax": -0.5,
+    "order": [
+      16
+    ],
+    "source": "Sprite\\Layer 14.asset"
+  },
+  {
+    "name": "Enemy8",
+    "file": "res://assets/menu/76_Enemy8.png",
+    "rect": [
+      1344.0,
+      592.5,
+      576.0,
+      487.5
+    ],
+    "parallax": -0.5,
+    "order": [
+      17
+    ],
+    "source": "Sprite\\26.asset"
+  },
+  {
+    "name": "Enemy9",
+    "file": "res://assets/menu/74_Enemy9.png",
+    "rect": [
+      -3.5,
+      624.5,
+      900.0,
+      455.5
+    ],
+    "parallax": -0.6,
+    "order": [
+      18
+    ],
+    "source": "Sprite\\Layer 15.asset"
+  },
+  {
+    "name": "Enemy10",
+    "file": "res://assets/menu/49_Enemy10.png",
+    "rect": [
+      495.25,
+      855.25,
+      513.5,
+      226.0
+    ],
+    "parallax": -0.7,
+    "order": [
+      19
+    ],
+    "source": "Sprite\\Layer 16.asset"
+  },
+  {
+    "name": "Enemy11",
+    "file": "res://assets/menu/72_Enemy11.png",
+    "rect": [
+      1238.45,
+      947.5,
+      111.0,
+      132.5
+    ],
+    "parallax": -0.7,
+    "order": [
+      20
+    ],
+    "source": "Sprite\\Layer 20.asset"
+  }
+]

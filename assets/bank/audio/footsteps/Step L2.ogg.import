@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://c67onij5dmy23"
+path="res://.godot/imported/Step L2.ogg-8768e1b605b2dc0b82bdb6f171871e8e.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/bank/audio/footsteps/Step L2.ogg"
+dest_files=["res://.godot/imported/Step L2.ogg-8768e1b605b2dc0b82bdb6f171871e8e.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

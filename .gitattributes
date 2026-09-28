@@ -1,0 +1,2 @@
+# glTF buffers exceed GitHub's regular file size limit.
+*.bin filter=lfs diff=lfs merge=lfs -text
