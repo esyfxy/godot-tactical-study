@@ -9,7 +9,7 @@ const NAV = preload("res://scripts/bank_navigation.gd")
 const COP_MAX_MOVE := [6, 5, 6]
 const ACTION_NAMES := {
 	-1: "移动", 1: "警棍", 3: "泰瑟枪", 5: "逮捕", 10: "射击",
-	14: "喝止", 33: "互动", 35: "急救包", 38: "打开", 55: "解救"
+	11: "装填",14: "喝止", 33: "互动", 35: "急救包", 38: "打开", 55: "解救",60:"侦察房间"
 }
 # Bank.unity tutorial interaction targets map to DoorData/WindowData EdgeIndex.
 const OPENING_EDGES_BY_STEP := {6: 2921, 8: 1721, 23: 2455, 25: 1735,
@@ -24,17 +24,13 @@ const ACTION_SOUNDS := {
 const WINDOW_SOUND: AudioStream = preload("res://assets/bank/audio/assetbundles_sounds_tactics_TacticsOpenWindow.wav")
 const ALARM_SOUND: AudioStream = preload("res://assets/bank/audio/assetbundles_sounds_tactics_TacticsAlarmed.wav")
 const VICTORY_SOUND: AudioStream = preload("res://assets/bank/audio/assetbundles_sounds_tactics_TacticsVictory.ogg")
-const PORTRAITS_ATLAS: Texture2D = preload("res://assets/bank/ui/portraits_small_original.png")
+const PORTRAITS = preload("res://scripts/cop_portraits.gd")
 const TACTICS_UI_ATLAS: Texture2D = preload("res://assets/bank/ui/tactics_ui_original.png")
 const TACTICS_ACTION_ATLAS: Texture2D = preload("res://assets/bank/ui/tactics_actions_original.png")
 const CARD_NAMES := ["什韦茨", "利维", "阿勒代斯", "布恩"]
-# Unity Sprite.m_Rect is bottom-left; AtlasTexture.region is top-left.
-const CARD_RECTS := [
-	Rect2(338, 3261, 330, 371), # SNIPER_BANK
-	Rect2(337, 1117, 320, 260), # COP0001
-	Rect2(1352, 2764, 330, 260), # COP0002
-	Rect2(1352, 2496, 330, 260) # COP0003
-]
+# Four distinct male portraits from the user's ten-person sheet. Character
+# names/gameplay remain unchanged; the other six are used by Horde recruits.
+const CARD_PORTRAITS := [1, 3, 4, 8]
 
 var source_data: Dictionary = {}
 var cells: Dictionary = {}
@@ -187,10 +183,7 @@ func _build_ui() -> void:
 		top_hud.add_child(card)
 		cop_cards.append(card)
 		var portrait := TextureRect.new()
-		var crop := AtlasTexture.new()
-		crop.atlas = PORTRAITS_ATLAS
-		crop.region = CARD_RECTS[card_index]
-		portrait.texture = crop
+		portrait.texture = PORTRAITS.texture(CARD_PORTRAITS[card_index])
 		portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE

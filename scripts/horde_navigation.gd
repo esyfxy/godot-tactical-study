@@ -18,7 +18,9 @@ func configure(data: Dictionary) -> void:
 	width = int(data.grid_size[0])
 	height = int(data.grid_size[1])
 	edges = data.grid_edges.duplicate()
-	if FileAccess.file_exists("res://assets/horde/room_ids.json"):
+	if data.has("room_ids"):
+		room_ids = data.room_ids.duplicate()
+	elif FileAccess.file_exists("res://assets/horde/room_ids.json"):
 		room_ids = JSON.parse_string(FileAccess.get_file_as_string("res://assets/horde/room_ids.json"))
 	for c in data.grid_cells: cells[Vector2i(int(c.PositionX), int(c.PositionY))] = c
 	rebuild()

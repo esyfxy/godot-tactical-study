@@ -2,7 +2,7 @@ extends Node
 
 # Original HordeMode scene: prep=5. HordeModeWeather overrides 4/6/8 at
 # waves 1/3/5. Loop offsets come from GameParametersDatabase.MusicTracks.
-const LOOP_OFFSETS = {"m05": 179.142, "m04": 105.75, "m06": 140.571, "m08": 289.756}
+const LOOP_OFFSETS = {"m05": 179.142, "m04": 105.75, "m06": 140.571, "m08": 289.756,"stealth":0.0}
 const ROOT = "res://assets/horde/audio/"
 var music: Array[AudioStreamPlayer] = []
 var voice: AudioStreamPlayer
@@ -18,11 +18,13 @@ var cache := {}
 var voice_count := 0
 var music_changes := 0
 var effects: AudioStreamPlayer
+var turn_cue: AudioStreamPlayer
+var turn_cue_count := 0
 var music_gain := 1.0
 
 func _exit_tree() -> void:
 	if crossfade != null and crossfade.is_valid(): crossfade.kill()
-	for player in music+[voice,effects]:
+	for player in music+[voice,effects,turn_cue]:
 		if is_instance_valid(player):
 			player.stop()
 			player.stream = null
@@ -41,6 +43,23 @@ func _ready() -> void:
 	effects = AudioStreamPlayer.new()
 	effects.volume_db = -10
 	add_child(effects)
+	turn_cue = AudioStreamPlayer.new()
+	turn_cue.volume_db = -10
+	add_child(turn_cue)
+
+# TacticsUI.prefab Clips[1/2/3], triggered by ShowTurns/ShowEnemyTurn.
+# Separate from shots and speech so refreshes/actions cannot cut the cue off.
+func announce_turn(player_turn: bool) -> void:
+	if not enabled: return
+	turn_cue.stream = stream(ROOT+"turns/"+("CopTurnAll" if player_turn else "EnemyTurnAll")+".ogg")
+	if turn_cue.stream == null: return
+	turn_cue.play()
+	turn_cue_count += 1
+
+func turn_swipe() -> void:
+	if not enabled: return
+	turn_cue.stream = stream(ROOT+"turns/TurnSwipe2.ogg")
+	if turn_cue.stream != null: turn_cue.play()
 
 func shot(gun: String) -> void:
 	var filename: String = {"Glock":"TacticsGlockShot.ogg","Rifle":"TacticsRifleShot.wav","Shotgun":"TacticsShotgunShot.wav"}.get(gun,"TacticsGunshot.wav")
@@ -50,6 +69,12 @@ func shot(gun: String) -> void:
 	effects.stream = cache[path]
 	effects.play()
 
+func grenade() -> void:
+	var path := ROOT+"combat/TacticsGrenade.wav"
+	if not cache.has(path): cache[path] = load(path) if ResourceLoader.exists(path) else AudioStreamWAV.load_from_file(path)
+	effects.stream = cache[path]
+	if effects.stream != null: effects.play()
+
 func stream(path: String) -> AudioStreamOggVorbis:
 	if not cache.has(path):
 		# Imported resources work in exported builds; raw fallback also allows
@@ -57,12 +82,14 @@ func stream(path: String) -> AudioStreamOggVorbis:
 		cache[path] = load(path).duplicate() if ResourceLoader.exists(path) else AudioStreamOggVorbis.load_from_file(path)
 	return cache[path]
 
-func sync(wave: int, phase: String) -> void:
+func sync(wave: int, phase: String,track_override: String="") -> void:
 	enabled = phase != "defeat"
 	if not enabled:
 		voice.stop()
+		turn_cue.stop()
 		return
 	var track := "m05" if wave == 0 else "m04" if wave < 3 else "m06" if wave < 5 else "m08"
+	if LOOP_OFFSETS.has(track_override): track=track_override
 	if current_track == track: return
 	current_track = track
 	music_changes += 1
@@ -104,6 +131,7 @@ func confirm_move(cop: Dictionary) -> bool:
 func _process(delta: float) -> void:
 	duck = move_toward(duck, (0.4 if voice.playing else 1.0) if enabled else 0.0, delta*2.5)
 	for i in range(music.size()):
-		var gain := (fade if i == active else 1.0-fade)*duck*0.28*music_gain
+		var level:=.12 if current_track=="stealth" else .20
+		var gain := (fade if i == active else 1.0-fade)*duck*level*music_gain
 		music[i].volume_db = linear_to_db(maxf(gain, 0.0001))
 		if not enabled and duck <= 0.0: music[i].stop()

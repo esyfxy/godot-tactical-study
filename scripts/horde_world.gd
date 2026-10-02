@@ -8,6 +8,7 @@ const UI = preload("res://scripts/horde_ui_theme.gd")
 const OPENINGS = [preload("res://assets/bank/openings/ColdOpenDoor1/coldopendoor1_original.gltf"), preload("res://assets/bank/openings/ColdOpenDoor2/coldopendoor2_original.gltf"), preload("res://assets/bank/openings/ArmoredDoor1/armoreddoor1_original.gltf")]
 const WINDOW = preload("res://assets/bank/openings/Window1/window1_original.gltf")
 const CASE_TEXTURES = {"Weapon": "res://assets/horde/loot/Gun.png", "Ammo": "res://assets/horde/loot/Ammo.png", "Equipment": "res://assets/horde/loot/Other.png", "RebelPoint": "res://assets/horde/loot/RebelPoints.png"}
+const GRENADE_FLIGHT_TIME := 0.62
 var state
 var camera: Camera3D
 var focus := Vector3.ZERO
@@ -40,12 +41,22 @@ var follow_actions := true
 var effects_gain := 1.0
 var intel_markers: Dictionary = {}
 var preview_hint_cache: Dictionary = {}
-const WEATHER_NAMES = ["晴朗", "阴天", "黄昏", "明亮夜色"]
+var preview_tile := Vector2i(-1,-1)
+var preview_cost := 0
+var awareness_clock:=0.0
+var enemy_vision: MeshInstance3D
+var enemy_vision_key:=""
+var vision_pointer:=Vector2(-1000,-1000)
+const WEATHER_NAMES = ["晴朗", "阴天", "黄昏", "明亮夜色", "细雨"]
+
+func map_scene() -> Node3D:
+	return SCENE.instantiate()
 
 func initialize(game_state) -> void:
 	state = game_state
-	room_ids = JSON.parse_string(FileAccess.get_file_as_string("res://assets/horde/room_ids.json"))
-	static_scene = SCENE.instantiate()
+	get_window().mouse_exited.connect(clear_vision_pointer)
+	room_ids = state.data.get("room_ids",JSON.parse_string(FileAccess.get_file_as_string("res://assets/horde/room_ids.json")))
+	static_scene = map_scene()
 	add_child(static_scene)
 	prepare_scene(static_scene)
 	for record in state.data.loot_spawns:
@@ -250,6 +261,7 @@ func create_openings() -> void:
 
 func sync(index: int) -> void:
 	selected = index
+	clear_preview()
 	preview_hint_cache.clear()
 	var active_ids: Dictionary = {}
 	for u in state.cops + state.enemies: active_ids[u.id] = true
@@ -266,6 +278,9 @@ func sync(index: int) -> void:
 		n.visible = not u.captured and (u.side == "cop" or state.enemy_visible_at(u,u.pos))
 		if u.side=="enemy" and n.visible: state.remember_enemy(u,u.pos)
 		var motion = n.get_node("Motion")
+		if u.side=="enemy" and not moving.has(u.id) and motion.action_clip.is_empty():
+			var facing: Vector2i=u.get("facing",Vector2i.DOWN)
+			motion.heading=atan2(-float(facing.x),float(facing.y))
 		motion.gun = str(u.gun)
 		motion.gender = int(u.get("gender",0))
 		motion.melee = str(u.get("melee",""))
@@ -277,10 +292,11 @@ func sync(index: int) -> void:
 			for cover in state.nav.covers_at(u.pos): motion.cover_tier = maxi(motion.cover_tier,int(cover.tier))
 		motion.update_weapons()
 		if u.dead and not motion.dead:
-			motion.dead = true
-			var death_clip: String = u.get("death_animation","idle_body_damage")
-			motion.start_clip(death_clip,true)
-			motion.action_time = motion.duration(death_clip)
+			var death_clip: String = "dead_on_back" if u.wound=="躯干" else u.get("death_animation","idle_body_damage")
+			motion.start_death(death_clip)
+			motion.action_time = motion.duration(motion.action_clip)
+			motion.action_blend=1.0
+			motion.apply_clip(motion.action_clip,motion.action_time)
 		rings[u.id].visible = not u.dead
 		actor_labels[u.id].visible = not u.dead
 		var is_selected: bool = u.side == "cop" and int(u.id) == int(state.cops[selected].id)
@@ -293,6 +309,59 @@ func sync(index: int) -> void:
 		actor_labels[u.id].text = str(u.name) + status
 		actor_labels[u.id].modulate = Color("#ffe033") if is_selected else Color.WHITE
 	refresh_intel_markers()
+	refresh_awareness_labels()
+	sync_loot_and_ranges()
+
+func refresh_awareness_labels() -> void:
+	var snapshot: Dictionary=state.awareness_snapshot()
+	for u: Dictionary in state.cops+state.enemies:
+		if not actor_labels.has(u.id) or u.dead or not state.conscious(u) or u.surrender: continue
+		var label: Label3D=actor_labels[u.id]
+		var kind: String=snapshot.cops.get(u.id,"unknown") if u.side=="cop" else snapshot.enemies.get(u.id,"inactive")
+		var suffix: String={"combat":" ! 已发现","suspicious":" ? 怀疑","investigate":" ? 调查声响","track":" ! 追踪最后位置","search":" ? 搜索"}.get(kind,"")
+		# Preserve injury text already assigned by sync; do not accumulate suffixes.
+		var status: String=" 手臂受伤" if u.wound=="手臂" else " 腿部受伤" if u.wound=="腿" else ""
+		if int(u.bleed)>0: status+=" · 失血 %d"%u.bleed
+		label.text=str(u.name)+status+suffix
+		var selected_cop: bool=u.side=="cop" and int(u.id)==int(state.cops[selected].id)
+		label.modulate=Color("#ff7865") if kind=="combat" else Color("#f4d345") if kind in ["suspicious","investigate","track","search"] or selected_cop else Color.WHITE
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouse: vision_pointer=event.position
+
+func clear_vision_pointer() -> void:
+	vision_pointer=Vector2(-1000,-1000)
+
+func update_enemy_vision() -> void:
+	if enemy_vision==null:
+		enemy_vision=MeshInstance3D.new();enemy_vision.name="VisibleEnemyVision"
+		enemy_vision.mesh=ImmediateMesh.new()
+		var material:=StandardMaterial3D.new()
+		material.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.vertex_color_use_as_albedo=true
+		material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.cull_mode=BaseMaterial3D.CULL_DISABLED
+		enemy_vision.material_override=material;add_child(enemy_vision)
+	var unit:=pick_unit(vision_pointer)
+	if unit.is_empty() or unit.side!="enemy" or not state.conscious(unit) or unit.surrender or not moving.is_empty():
+		enemy_vision.hide();enemy_vision_key="";return
+	var key:="%s:%s:%s:%s:%s:%s"%[unit.id,unit.pos,unit.get("facing",Vector2i.DOWN),state.ENEMY_AI.alerted(state,unit),state.nav.revision,state.cover_enabled(unit)]
+	if key==enemy_vision_key: enemy_vision.show();return
+	enemy_vision_key=key
+	var mesh: ImmediateMesh=enemy_vision.mesh
+	mesh.clear_surfaces();mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	for y in range(unit.pos.y-11,unit.pos.y+12):
+		for x in range(unit.pos.x-11,unit.pos.x+12):
+			var tile:=Vector2i(x,y)
+			if not state.nav.inside(tile): continue
+			var area: int=state.ENEMY_AI.vision_area(state,unit,tile)
+			if area==0: continue
+			mesh.surface_set_color(Color(1,.35,.2,.16) if area==1 else Color(1,.8,.18,.12))
+			var p:=grid(tile,.10)
+			for v in [Vector3(-.7,0,-.7),Vector3(.7,0,-.7),Vector3(.7,0,.7),Vector3(-.7,0,-.7),Vector3(.7,0,.7),Vector3(-.7,0,.7)]: mesh.surface_add_vertex(p+v)
+	mesh.surface_end();enemy_vision.show()
+
+func sync_loot_and_ranges() -> void:
 	for tile in cases.keys():
 		if not state.loot.has(tile):
 			if source_cases.has(tile): source_cases[tile].hide()
@@ -355,6 +424,11 @@ func pick_loot_marker(pixel: Vector2) -> Vector2i:
 
 func _process(_delta: float) -> void:
 	if camera == null: return
+	awareness_clock-=_delta
+	if awareness_clock<=0:
+		awareness_clock=.12
+		refresh_awareness_labels()
+		update_enemy_vision()
 	# Keep supply text readable in screen pixels when zooming out.
 	var pixel := camera.size / maxf(1,get_viewport().get_visible_rect().size.y) * 0.5
 	for id in actor_labels: actor_labels[id].pixel_size = pixel
@@ -432,6 +506,7 @@ func draw_ranges() -> void:
 	lines.surface_end()
 
 func draw_preview(tile: Vector2i) -> int:
+	if tile==preview_tile and state.phase=="player" and moving.is_empty(): return preview_cost
 	var mesh: ImmediateMesh = preview.mesh
 	clear_preview()
 	if not reached.costs.has(tile) or state.phase != "player" or not moving.is_empty(): return 0
@@ -450,14 +525,16 @@ func draw_preview(tile: Vector2i) -> int:
 		mesh.surface_add_vertex(p + corners[i])
 		mesh.surface_add_vertex(p + corners[(i + 1) % 4])
 	mesh.surface_end()
-	return maxi(1, int(ceil((float(reached.costs[tile]) - 0.001) / (state.move_distance(c) * 1.4))))
+	preview_tile=tile
+	preview_cost=maxi(1, int(ceil((float(reached.costs[tile]) - 0.001) / (state.move_distance(c) * 1.4))))
+	return preview_cost
 
 func movement_hint(tile: Vector2i) -> String:
 	if preview_hint_cache.has(tile): return preview_hint_cache[tile]
 	var c: Dictionary=state.cops[selected]
 	var threats := 0
 	for e: Dictionary in state.active_enemies():
-		if not state.visible_enemy(e) or e.gun=="" or int(e.stun)>0 or e.surrender or e.wound=="手臂": continue
+		if e.gun=="" or int(e.stun)>0 or e.surrender or e.wound=="手臂" or not state.visible_enemy(e): continue
 		if state.nav.targeting(e.pos,tile,state.current_shot_range(e),state.cover_enabled(e),state.cover_enabled(c)).clear: threats+=1
 	var text := "未侦察，敌情未知" if not state.tile_visible(tile) else "队伍视野内"
 	text += " · %d 条已知枪线" % threats if threats>0 else " · 无已知枪线"
@@ -470,6 +547,8 @@ func clear_cover(root: Node3D) -> void:
 		child.queue_free()
 
 func clear_preview() -> void:
+	preview_tile=Vector2i(-1,-1)
+	preview_cost=0
 	preview.mesh.clear_surfaces()
 	clear_cover(cover_preview)
 
@@ -547,8 +626,10 @@ func play_enemy_move(u: Dictionary, route: Array, start: Vector2i, quick := fals
 	n.position = grid(start)
 	n.visible = enemy_seen_at(start)
 	var previous := start
+	u.presented_tile=start
 	var presented := false
 	for tile: Vector2i in route:
+		u.facing=tile-previous
 		var next := grid(tile)
 		# Inspect every segment, including routes whose endpoints are both hidden.
 		var show_segment: bool = enemy_seen_at(previous) or enemy_seen_at(tile)
@@ -577,6 +658,7 @@ func play_enemy_move(u: Dictionary, route: Array, start: Vector2i, quick := fals
 			if interrupted: break
 	if n.visible: await get_tree().create_timer(0.06 if quick else 0.15).timeout
 	moving.erase(u.id)
+	u.erase("presented_tile")
 	enemy_playback_unit = {}
 
 func move_unit(u: Dictionary, route: Array, quick := false) -> void:
@@ -609,27 +691,49 @@ func _set_cop_position(at: Vector3,u: Dictionary,n: Node3D) -> void:
 	refresh_intel_markers()
 
 func cycle_weather() -> void:
-	weather_index = (weather_index + 1) % WEATHER_NAMES.size()
+	set_weather((weather_index + 1) % WEATHER_NAMES.size())
+
+func set_weather(index: int, animate := true) -> void:
+	weather_index = clampi(index, 0, WEATHER_NAMES.size() - 1)
 	if weather_tween != null and weather_tween.is_valid(): weather_tween.kill()
-	var colors := [Color("ded3c5"), Color("c5d1df"), Color("f5c99a"), Color("afc3e6")]
-	var energy := [0.9, 0.55, 0.75, 0.42]
+	var colors := [Color("ded3c5"), Color("c5d1df"), Color("f5c99a"), Color("afc3e6"), Color("becbd0")]
+	var energy := [0.9, 0.55, 0.75, 0.42, 0.59]
+	var ambient := 0.85 if weather_index == 3 else 0.76 if weather_index == 4 else 0.7
+	if not animate:
+		sunlight.light_color = colors[weather_index]
+		sunlight.light_energy = energy[weather_index]
+		atmosphere.ambient_light_energy = ambient
+		return
 	weather_tween = create_tween().set_parallel(true)
 	weather_tween.tween_property(sunlight, "light_color", colors[weather_index], 1.2)
 	weather_tween.tween_property(sunlight, "light_energy", energy[weather_index], 1.2)
-	weather_tween.tween_property(atmosphere, "ambient_light_energy", 0.85 if weather_index == 3 else 0.7, 1.2)
+	weather_tween.tween_property(atmosphere, "ambient_light_energy", ambient, 1.2)
+
+func unit_hit_score(pixel: Vector2,node: Node3D,prone:=false) -> float:
+	# Pick the projected body and foot ring, not a fixed circle at the chest.
+	var foot:=node.global_position
+	var head:=foot+Vector3.UP*1.95
+	if prone and node.has_node("Motion"):
+		var motion=node.get_node("Motion")
+		head=motion.skeleton.global_transform*motion.skeleton.get_bone_global_pose(motion.hips).origin
+	if camera.is_position_behind(foot): return INF
+	var a:=camera.unproject_position(foot)
+	var b:=camera.unproject_position(head)
+	var segment:=b-a
+	var fraction:=clampf((pixel-a).dot(segment)/maxf(.001,segment.length_squared()),0,1)
+	var scale:=get_viewport().get_visible_rect().size.y/720.0
+	var side:=camera.unproject_position(foot+camera.global_basis.x*.48)
+	var radius:=maxf(10.0*scale,a.distance_to(side))+2.0*scale
+	var distance:=pixel.distance_to(a+segment*fraction)
+	return distance/radius if distance<=radius else INF
 
 func pick_unit(pixel: Vector2) -> Dictionary:
 	var best: Dictionary = {}
-	var nearest := 30.0
+	var nearest := INF
 	for u in state.cops + state.enemies:
 		if u.dead or u.captured: continue
 		if not actors.has(u.id) or not actors[u.id].visible: continue
-		var hit_position: Vector3 = actors[u.id].position + Vector3.UP
-		if u.wound=="躯干":
-			var motion = actors[u.id].get_node("Motion")
-			hit_position = motion.skeleton.global_transform * motion.skeleton.get_bone_global_pose(motion.hips).origin
-		var projected := camera.unproject_position(hit_position)
-		var distance := pixel.distance_to(projected)
+		var distance:=unit_hit_score(pixel,actors[u.id],u.wound=="躯干")
 		if distance < nearest:
 			nearest = distance
 			best = u
@@ -645,6 +749,72 @@ func shot_flash(actor: Node3D) -> void:
 	var tween := light.create_tween()
 	tween.tween_property(light,"light_energy",0.0,.08)
 	tween.tween_callback(light.queue_free)
+
+func grenade_flight(from: Vector2i, to: Vector2i) -> void:
+	var grenade := MeshInstance3D.new()
+	grenade.name = "GrenadeProjectile"
+	var shape := CapsuleMesh.new()
+	shape.radius = .13
+	shape.height = .34
+	grenade.mesh = shape
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color("#282d25")
+	mat.metallic = .45
+	grenade.material_override = mat
+	add_child(grenade)
+	var band := MeshInstance3D.new()
+	var bead := SphereMesh.new()
+	bead.radius = .085
+	bead.height = .17
+	band.mesh = bead
+	band.position.y = .13
+	var marker := StandardMaterial3D.new()
+	marker.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	marker.albedo_color = Color("#ffe45a")
+	band.material_override = marker
+	grenade.add_child(band)
+	var start := grid(from,1.32)
+	var finish := grid(to,.16)
+	grenade.position = start
+	var tween := create_tween()
+	tween.tween_method(func(t: float):
+		if is_instance_valid(grenade):
+			grenade.position = start.lerp(finish,t)+Vector3.UP*(1.85*4.0*t*(1.0-t))
+			grenade.rotation.z = t*TAU*2.0,
+		0.0,1.0,GRENADE_FLIGHT_TIME).set_trans(Tween.TRANS_LINEAR)
+	await tween.finished
+	grenade.free()
+
+func grenade_blast(tile: Vector2i) -> void:
+	# Ground-level flash/ring preserves battlefield readability; no full-screen
+	# white overlay or lingering smoke that would hide units and cover.
+	var burst := Node3D.new()
+	burst.name = "GrenadeBurst"
+	burst.position = grid(tile,.11)
+	add_child(burst)
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 3.12
+	torus.outer_radius = 3.48
+	ring.mesh = torus
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = Color(1.0,.94,.65,.75)
+	ring.material_override = material
+	ring.scale = Vector3(.06,.06,.06)
+	burst.add_child(ring)
+	var flash := OmniLight3D.new()
+	flash.light_color = Color("#fff1ad")
+	flash.light_energy = 4.0
+	flash.omni_range = 5.0
+	flash.position.y = .9
+	burst.add_child(flash)
+	var tween := burst.create_tween().set_parallel(true)
+	tween.tween_property(ring,"scale",Vector3.ONE,.34).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(material,"albedo_color",Color(1.0,.94,.65,0),.38)
+	tween.tween_property(flash,"light_energy",0.0,.34)
+	tween.chain().tween_callback(burst.queue_free)
 
 func combat_text(actor: Node3D, value: String) -> void:
 	var label := Label3D.new()

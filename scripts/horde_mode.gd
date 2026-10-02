@@ -7,12 +7,13 @@ var save_path := SAVE.PATH
 var settings_path := SETTINGS.PATH
 var settings: Dictionary = SETTINGS.DEFAULTS.duplicate()
 const WORLD = preload("res://scripts/horde_world.gd")
+const RAIN = preload("res://scripts/horde_rain.gd")
 const MINIMAP = preload("res://scripts/horde_minimap.gd")
 const DIALOG = preload("res://scripts/bank_dialog.gd")
-const PORTRAITS = preload("res://assets/bank/ui/portraits_small_original.png")
 const GUN_SOUND = preload("res://assets/bank/audio/assetbundles_sounds_tactics_gunshots_TacticsGunshot.wav")
 var state = STATE.new()
 var world
+var rain
 var selected := 0
 var busy := false
 var quick_enemy := false
@@ -54,23 +55,45 @@ var phase_paper: Control
 var turn_summary: Label
 var phase_banner_tween: Tween
 var phase_banner_serial := 0
+var phase_slide := 0.0:
+	set(value):
+		phase_slide = value
+		if phase_paper != null: phase_paper.position.x = (size.x-phase_paper.size.x)*.5+value*size.x
+var initial_turn_announced := false
+var reaction_notice: Label
 var result_written := false
 var pending_target: Dictionary = {}
 var auto_start := false
 var random_seed := -1
 var results_path := "user://horde_results.json"
+var developer_session := false
+var developer_save_path := "user://horde_developer.dat"
+var developer_results_path := "user://horde_developer_results.json"
 var camera_drag_held := false
 var camera_drag_started := false
 var camera_drag_origin := Vector2.ZERO
 var camera_drag_last := Vector2.ZERO
 const CAMERA_DRAG_THRESHOLD := 4.0
 
+func mission_data() -> Dictionary:
+	return JSON.parse_string(FileAccess.get_file_as_string("res://assets/horde/horde_data.json"))
+
+func create_state():
+	return STATE.new()
+
+func create_world():
+	return WORLD.new()
+
+func allows_resume() -> bool:
+	return true
+
 func _ready() -> void:
-	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/horde/horde_data.json"))
+	var data: Dictionary = mission_data()
+	state = create_state()
 	state.initialize(data, random_seed)
 	settings = SETTINGS.read_settings(settings_path)
 	var resumed := false
-	if get_tree().has_meta("horde_resume"):
+	if allows_resume() and get_tree().has_meta("horde_resume"):
 		get_tree().remove_meta("horde_resume")
 		var saved := SAVE.read_save(save_path)
 		if saved.ok:
@@ -91,19 +114,25 @@ func _ready() -> void:
 	_layout()
 	refresh()
 	if not auto_start and not resumed: show_help()
+	elif not auto_start: start_player_banner()
 
 func apply_settings() -> void:
 	quick_enemy = float(settings.enemy_speed)>1
 	world.follow_actions = bool(settings.follow)
 	world.effects_gain = float(settings.effects)
+	rain.effects_gain = float(settings.effects)
 	battle_audio.music_gain = float(settings.music)
 	battle_audio.voice.volume_db = linear_to_db(maxf(.0001,float(settings.voice)))-3
 	battle_audio.effects.volume_db = linear_to_db(maxf(.0001,float(settings.effects)))-10
+	battle_audio.turn_cue.volume_db = battle_audio.effects.volume_db
 	action_player.enemy_speed = float(settings.enemy_speed)
 	_layout()
 
 func change_setting(key: String,value: Variant) -> void:
 	settings[key] = value
+	if key == "weather":
+		world.set_weather(int(value))
+		rain.set_raining(world.weather_index == 4)
 	apply_settings()
 	var error := SETTINGS.write_settings(settings,settings_path)
 	if error != OK: state.say("设置未能写入磁盘："+error_string(error))
@@ -115,6 +144,18 @@ func save_game(automatic := false) -> bool:
 		state.say("战局已保存。" if result.ok else result.error)
 		refresh()
 	return result.ok
+
+func start_developer_session() -> void:
+	if developer_session: return
+	developer_session = true
+	# Test mutations must never replace the normal Continue entry or records.
+	save_path = developer_save_path
+	results_path = developer_results_path
+
+func show_developer() -> void:
+	if not OS.is_debug_build() or busy or state.phase!="player" or dialog.visible or inventory_panel.visible: return
+	_end_camera_drag()
+	modal.developer.present()
 
 func box_style(color: Color, border := Color("#a49042")) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -160,11 +201,16 @@ func _build() -> void:
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	viewport.msaa_3d = Viewport.MSAA_2X
 	surface.add_child(viewport)
-	world = WORLD.new()
+	world = create_world()
 	viewport.add_child(world)
 	world.initialize(state)
+	world.set_weather(int(settings.weather), false)
 	surface.gui_input.connect(_world_input)
-	surface.mouse_exited.connect(func(): world.clear_preview(); preview_label.hide())
+	surface.mouse_exited.connect(func(): world.clear_preview(); world.clear_vision_pointer(); preview_label.hide())
+	rain = RAIN.new()
+	rain.world = world
+	add_child(rain)
+	rain.set_raining(world.weather_index == 4)
 	hud = Control.new()
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -219,13 +265,16 @@ func _build() -> void:
 	phase_banner = label("",20,phase_paper)
 	phase_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	phase_banner.add_theme_color_override("font_color", Color("#1b1a16"))
-	phase_banner.add_theme_font_size_override("font_size",22)
+	phase_banner.add_theme_font_size_override("font_size",32)
 	phase_banner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	phase_banner.offset_left=20
 	phase_banner.offset_top=3
 	phase_banner.offset_right=-20
 	phase_banner.offset_bottom=-10
 	phase_paper.hide()
+	reaction_notice = label("",14,hud)
+	reaction_notice.add_theme_stylebox_override("normal",box_style(Color("#171914dc"),Color("#a49042")))
+	reaction_notice.hide()
 	wheel = WHEEL.new()
 	hud.add_child(wheel)
 	wheel.camera_drag_requested.connect(_begin_camera_drag)
@@ -235,7 +284,7 @@ func _build() -> void:
 	dialog = DIALOG.new()
 	hud.add_child(dialog)
 	dialog.confirmed.connect(_dialog_confirm)
-	dialog.dismissed.connect(func(): refresh())
+	dialog.dismissed.connect(func(): refresh(); start_player_banner())
 	inventory_panel = INVENTORY_PANEL.new()
 	inventory_panel.game = self
 	hud.add_child(inventory_panel)
@@ -254,8 +303,10 @@ func _layout() -> void:
 	hud.get_node("Legend").position = Vector2(size.x-210, 345)
 	notice.position = Vector2(20, size.y-115)
 	notice.size = Vector2(minf(920, size.x-40), 48)
-	phase_paper.position=Vector2((size.x-520)*0.5,size.y*.21+8)
-	phase_paper.size=Vector2(520,58)
+	phase_paper.size=Vector2(minf(820,size.x-40),96)
+	phase_paper.position=Vector2((size.x-phase_paper.size.x)*.5+phase_slide*size.x,(size.y-96)*.5)
+	reaction_notice.position=Vector2(16,size.y-160 if stats.visible else 132)
+	reaction_notice.size=Vector2(minf(330,size.x-32),34)
 	if action_panel.visible: position_actions()
 	if wheel.visible: wheel.present(wheel.entries, wheel.anchor_pixel, size)
 
@@ -270,21 +321,30 @@ func select_cop(index: int) -> void:
 	world.center_on(state.cops[index].pos)
 	refresh()
 
+func mission_summary() -> String:
+	if developer_session: return "测试 · 敌人 %d / 波 %d\n第 %d 回合" % [state.active_enemies().size(),state.wave,state.turn]
+	return "罪犯 %d · 第 %d 波\n第 %d 回合" % [state.active_enemies().size(),state.wave,state.turn]
+
+func mission_stats() -> String:
+	return "回合 %d  /  第 %d 波\n存活 %d/%d · 敌人 %d\n击杀 %d · 逮捕 %d\n反抗点数 %d\n\n%s" % [state.turn, state.wave, state.living_cops().size(), state.cops.size(), state.active_enemies().size(), state.killed, state.arrested, state.points, "本回合结束：新一波入场" if state.wave_due() else "距下一波还有 %d 回合" % state.next_wave_in()]
+
+func music_override() -> String:
+	return ""
+
 func refresh() -> void:
-	if battle_audio != null: battle_audio.sync(state.wave, state.phase)
+	if battle_audio != null: battle_audio.sync(state.wave, state.phase,music_override())
 	if state.cops[selected].dead:
 		for i in range(state.cops.size()):
 			if not state.cops[i].dead:
 				selected = i
 				break
 	ui.refresh()
-	stats.text = "回合 %d  /  第 %d 波\n存活 %d/%d · 敌人 %d\n击杀 %d · 逮捕 %d\n反抗点数 %d\n\n%s" % [state.turn, state.wave, state.living_cops().size(), state.cops.size(), state.active_enemies().size(), state.killed, state.arrested, state.points, "本回合结束：新一波入场" if state.wave_due() else "距下一波还有 %d 回合" % state.next_wave_in()]
-	var summary := "罪犯 %d · 第 %d 波\n第 %d 回合" % [state.active_enemies().size(),state.wave,state.turn]
+	stats.text = mission_stats()
+	var summary := mission_summary()
 	if turn_summary.text!=summary:
 		turn_summary.text=summary
-		var ticker:=turn_summary.create_tween()
-		ticker.tween_property(turn_summary,"modulate:a",.55,.055)
-		ticker.tween_property(turn_summary,"modulate:a",1.0,.17).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		turn_summary.modulate.a=.55
+		UI_MOTION.animate(turn_summary,"ticker",^"modulate:a",1.0,.2)
 	var message: String = str(state.log.back()) if not state.log.is_empty() else ""
 	if message != last_notice:
 		last_notice = message
@@ -313,6 +373,10 @@ func _world_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		if camera_drag_held: return
 		if action_panel.visible: return
+		if not world.pick_unit(event.position).is_empty():
+			world.clear_preview()
+			preview_label.hide()
+			return
 		var tile: Vector2i = world.pick_tile(event.position)
 		var cost: int = world.draw_preview(tile)
 		preview_label.visible = cost > 0
@@ -475,7 +539,7 @@ func collect_loot(tile: Vector2i, mode: String) -> void:
 	if not state.loot.has(tile) or not state.can_collect_at(state.cops[selected].pos,tile): return
 	busy = true
 	action_panel.hide()
-	await action_player.interact(state.cops[selected],tile,func(): state.collect(state.cops[selected],tile,mode))
+	await action_player.interact(state.cops[selected],tile,func(): state.collect(state.cops[selected],tile,mode),.5)
 	busy = false
 	refresh()
 	if mode == "ammo" and state.loot.has(tile): show_loot(tile)
@@ -640,7 +704,7 @@ func add_body_choices(c: Dictionary,e: Dictionary,aim: bool,reason: String,execu
 func execute_attack(e: Dictionary, action: String, part := "躯干") -> void:
 	if blocked(): return
 	state.take_events()
-	var accepted: bool = state.attack(state.cops[selected], e, action, part)
+	var accepted: bool = state.attack(state.cops[selected], e, action, part, action=="grenade")
 	action_panel.hide()
 	if accepted:
 		busy = true
@@ -743,9 +807,11 @@ func end_turn() -> void:
 	preview_label.hide()
 	var previous_wave: int=state.wave
 	state.begin_enemy_turn()
-	announce_phase("第 %d 波 · 敌方行动" % state.wave if state.wave>previous_wave else "敌人行动 · 可见行动会跟随镜头",false)
 	refresh()
-	await get_tree().create_timer(0.25).timeout
+	var new_wave: bool = state.wave>previous_wave
+	var announcement := "第 %d 波" % state.wave if new_wave else enemy_banner_text()
+	announce_phase(announcement,false,4.366667 if new_wave else 1.516667,new_wave)
+	await phase_banner_tween.finished
 	for e in state.active_enemies():
 		for action in range(state.enemy_action_limit(e)+2):
 			if int(e.ap)<=0: break
@@ -768,9 +834,12 @@ func end_turn() -> void:
 	state.finish_enemy_turn()
 	await action_player.play(state.take_events())
 	phase_paper.hide()
+	refresh()
+	if state.phase=="player":
+		announce_phase("第 %d 回合 · 你的行动" % state.turn,true)
+		await phase_banner_tween.finished
 	busy = false
 	refresh()
-	if state.phase=="player": announce_phase("第 %d 回合 · 你的行动" % state.turn,true,.95)
 	if state.phase == "player" and world.follow_actions: world.center_on(state.cops[selected].pos)
 	if state.phase == "player" and not auto_start: save_game(true)
 
@@ -809,6 +878,7 @@ func use_command(command: String) -> void:
 func choose_reaction(part: String, serial := -1) -> void:
 	if not reaction_waiting or (serial >= 0 and serial != reaction_serial): return
 	reaction_waiting = false
+	reaction_notice.hide()
 	action_panel.hide()
 	reaction_chosen.emit(part)
 
@@ -824,9 +894,10 @@ func play_reactions(requests: Array) -> void:
 		if phase_banner_tween!=null and phase_banner_tween.is_valid(): phase_banner_tween.kill()
 		reaction_serial += 1
 		reaction_waiting = true
-		phase_banner.text = request.kind+"：选择部位，或放弃射击"
-		phase_paper.show()
-		phase_paper.modulate.a=1
+		phase_paper.hide()
+		reaction_notice.text = request.kind+" · 选择部位 / Esc 放弃"
+		reaction_notice.show()
+		UI_MOTION.reveal(reaction_notice)
 		if world.follow_actions: world.center_on(e.pos)
 		var serial := reaction_serial
 		add_body_choices(c,e,false,"",func(part): choose_reaction(part,serial))
@@ -834,39 +905,70 @@ func play_reactions(requests: Array) -> void:
 		var part: String = await reaction_chosen
 		state.take_events()
 		if state.resolve_reaction(request,part): await action_player.play(state.take_events())
-		phase_banner.text = "敌人回合"
+		phase_paper.hide()
 
-func announce_phase(text: String,player_turn: bool,hold := .78) -> void:
+func enemy_banner_text() -> String:
+	var warmup: int = int(state.params.HordeWarmUpTurns)-state.turn
+	return "距第一波到来还剩 %d 回合" % warmup if warmup>0 else "距下一波到来前剩余回合数：%d" % state.next_wave_in()
+
+func start_player_banner() -> void:
+	if initial_turn_announced or auto_start: return
+	initial_turn_announced = true
+	busy = true
+	refresh()
+	announce_phase("第 %d 回合 · 你的行动" % state.turn,true)
+	await phase_banner_tween.finished
+	busy = false
+	refresh()
+
+# Source AnimationClip event times; AI waits for the completed banner.
+func announce_phase(text: String,player_turn: bool,duration := 1.5,new_wave := false) -> void:
 	phase_banner_serial+=1
 	var serial:=phase_banner_serial
 	if phase_banner_tween!=null and phase_banner_tween.is_valid(): phase_banner_tween.kill()
 	phase_banner.text=text
 	phase_banner.add_theme_color_override("font_color",Color("#211d10") if player_turn else Color("#fff3e7"))
-	phase_paper.tint=Color("#efd139") if player_turn else Color("#b74c40")
-	phase_paper.modulate.a=0
-	phase_paper.position.y=size.y*.21+2
+	phase_paper.tint=Color("#111110") if new_wave else Color("#efd139") if player_turn else Color("#b74c40")
+	phase_paper.queue_redraw()
+	phase_paper.modulate.a=1
+	phase_slide=-1
 	phase_paper.show()
+	var entry := .383333 if new_wave else .2
+	var cue_time := .016667 if player_turn else .033333
+	var swipe_time := 3.966667 if new_wave else 1.066667 if player_turn else 1.116667
+	var exit_time := 4.0 if new_wave else 1.083333 if player_turn else 1.116667
 	phase_banner_tween=create_tween()
-	phase_banner_tween.set_parallel(true)
-	phase_banner_tween.tween_property(phase_paper,"modulate:a",1,.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	phase_banner_tween.tween_property(phase_paper,"position:y",size.y*.21+8,.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	phase_banner_tween.set_parallel(false)
-	phase_banner_tween.tween_interval(hold)
-	phase_banner_tween.tween_property(phase_paper,"modulate:a",0,.2)
+	phase_banner_tween.tween_property(self,"phase_slide",0.0,entry).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	phase_banner_tween.tween_interval(exit_time-entry)
+	phase_banner_tween.tween_property(self,"phase_slide",1.0,duration-exit_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	phase_banner_tween.tween_callback(func():
 		if phase_banner_serial==serial: phase_paper.hide())
+	get_tree().create_timer(cue_time).timeout.connect(_phase_cue.bind(serial,player_turn))
+	get_tree().create_timer(swipe_time).timeout.connect(_phase_swipe.bind(serial))
+
+func _phase_cue(serial: int,player_turn: bool) -> void:
+	if phase_banner_serial==serial: battle_audio.announce_turn(player_turn)
+
+func _phase_swipe(serial: int) -> void:
+	if phase_banner_serial==serial: battle_audio.turn_swipe()
 
 func offer_overwatch(e: Dictionary, shot_target_id := -1) -> void:
 	await play_reactions(state.overwatch_requests(e,shot_target_id))
 
 func _enemy_step(tile: Vector2i,e: Dictionary) -> bool:
+	var before_suspicion: bool=not e.get("suspected",{}).is_empty()
+	var previous: Vector2i=e.get("presented_tile",tile)
+	if previous!=tile: e.facing=tile-previous
+	e.presented_tile=tile
 	e.pos = tile
 	var before: Array = e.get("visible_ids",[]).duplicate()
+	e.ai_moving=true
 	var seen: Array = state.enemy_targets(e)
+	e.ai_moving=false
 	if world.actors.has(e.id) and world.actors[e.id].visible:
-		phase_banner.text = "%s · %s" % [e.name,e.get("intent","移动")]
+		turn_button.text = "%s · %s" % [e.name,e.get("intent","移动")]
 	await offer_overwatch(e)
-	return e.dead or e.captured or int(e.stun)>0 or seen.any(func(c): return c.id not in before)
+	return not state.conscious(e) or seen.any(func(c): return c.id not in before) or (not before_suspicion and not e.get("suspected",{}).is_empty())
 
 func _dialog_confirm(value: String) -> void:
 	modal.hide()
@@ -939,6 +1041,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			hud.get_node("Legend").visible = minimap.visible
 		KEY_F1: show_help()
 		KEY_F5: save_game()
+		KEY_F8: show_developer()
 
 func _process(delta: float) -> void:
 	if camera_drag_held and blocked(): _end_camera_drag()

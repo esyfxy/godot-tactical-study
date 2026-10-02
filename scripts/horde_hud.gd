@@ -4,7 +4,8 @@ const UI = preload("res://scripts/horde_ui_theme.gd")
 const PAPER = preload("res://scripts/horde_paper.gd")
 const CARD = preload("res://scripts/horde_portrait.gd")
 const SLOT = preload("res://scripts/horde_item_slot.gd")
-const PORTRAITS = preload("res://assets/bank/ui/portraits_small_original.png")
+const MOTION = preload("res://scripts/horde_ui_motion.gd")
+const PORTRAITS = preload("res://scripts/cop_portraits.gd")
 const SKILLS = ["AimedShot", "OrderToSurrender", "SeeFar", "Fortification", "SecondCheek", "AdrenalineRush", "Bide", "SmoothOps", "Resilience"]
 var game
 var cards: Control
@@ -21,11 +22,21 @@ var sections: Control
 var gear: Button
 var command: Button
 var journal: Button
+var awareness_label: Label
+var awareness_clock:=0.0
+var last_awareness:=""
 var pinned := false
 var drawer_hover := false
 var leave_delay := 0.0
 var ui_scale := 1.0
 var pointer_position := Vector2(-1000, -1000)
+var drawer_open := false
+var hover_suppressed := false
+var drawer_tween: Tween
+var drawer_progress := 0.0:
+	set(value):
+		drawer_progress = value
+		if drawer != null: drawer.position.y = size.y-76-164*value
 
 func paper(parent: Node, rect: Rect2, color := UI.GOLD) -> Control:
 	var p := PAPER.new()
@@ -52,6 +63,11 @@ func _ready() -> void:
 	UI.icon(command, "Spellbook", Rect2(12, 22, 45, 49), UI.INK)
 	journal = UI.button(self,"战报 [J]",Rect2(250,8,130,42),game.show_journal,22)
 	journal.tooltip_text="查看已知战斗事件；点击记录定位"
+	awareness_label=UI.text(self,"未确认暴露",Rect2(250,54,260,64),19)
+	awareness_label.add_theme_color_override("font_shadow_color",Color("#080a08"))
+	awareness_label.add_theme_constant_override("shadow_offset_x",1)
+	awareness_label.add_theme_constant_override("shadow_offset_y",1)
+	awareness_label.tooltip_text="注意敌人朝向。黄色 ? 表示怀疑或调查；红色 ! 表示确认发现；失去目击后仍可能追踪最后位置。"
 	cards = Control.new()
 	cards.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(cards)
@@ -66,11 +82,15 @@ func _ready() -> void:
 	compact.color = Color("#090909eb")
 	compact.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(compact)
-	compact.mouse_entered.connect(func(): drawer_hover = true; drawer.show())
+	compact.mouse_entered.connect(func():
+		if hover_suppressed: return
+		drawer_hover = true
+		leave_delay=.2
+		set_drawer(true))
 	compact.gui_input.connect(func(event):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			pinned = not pinned
-			drawer.visible = pinned or drawer_hover)
+			set_drawer(pinned or drawer_hover))
 	compact.tooltip_text = "移入查看装备 · I 固定 / 收起 · M 战况地图 · F1 操作说明"
 	equipment = Control.new()
 	equipment.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -83,6 +103,9 @@ func _ready() -> void:
 	sections.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	drawer.add_child(sections)
 	drawer.hide()
+	drawer.clip_contents = true
+	drawer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	drawer.mouse_behavior_recursive = Control.MOUSE_BEHAVIOR_DISABLED
 	set_process(true)
 
 func fit(view_size: Vector2) -> void:
@@ -96,7 +119,7 @@ func fit(view_size: Vector2) -> void:
 	points_icon.position.x = size.x - 430
 	compact.position = Vector2(0, size.y - 76)
 	compact.size = Vector2(size.x, 76)
-	drawer.position = Vector2(0, size.y - 240)
+	drawer.position = Vector2(0, size.y - 76 - 164*drawer_progress)
 	drawer.size = Vector2(size.x, 240)
 	sections.size = drawer.size
 	# Four original recruits fit at their reference size; fifth reinforcement uses the same spacing.
@@ -105,22 +128,23 @@ func fit(view_size: Vector2) -> void:
 	var x := 0.0
 	for i in range(card_nodes.size()):
 		var card: Control = card_nodes[i]
-		card.position = Vector2(x, 0)
-		card.size = Vector2(156, 210) if i == game.selected else Vector2(118, 156)
+		MOTION.target(card,"position",^"position",Vector2(x,0))
+		MOTION.target(card,"size",^"size",Vector2(156,210) if i == game.selected else Vector2(118,156))
 		card.queue_redraw()
 		x += 168 if i == game.selected else 130
 	queue_redraw()
 
 func refresh() -> void:
+	var used_portraits: Array = []
+	for existing in card_nodes: used_portraits.append(int(existing.get_meta("portrait_slot",-1)))
 	while card_nodes.size() < game.state.cops.size():
 		var index := card_nodes.size()
 		var card := CARD.new()
 		var cop: Dictionary = game.state.cops[index]
-		var crop := AtlasTexture.new()
-		crop.atlas = PORTRAITS
-		for employee in game.state.data.employees:
-			if employee.id == cop.employee: crop.region = Rect2(employee.portrait[0], employee.portrait[1], employee.portrait[2], employee.portrait[3])
-		card.portrait = crop
+		var slot: int = PORTRAITS.choose(int(cop.get("gender",0)),cop.get("employee",cop.name),used_portraits)
+		used_portraits.append(slot)
+		card.set_meta("portrait_slot",slot)
+		card.portrait = PORTRAITS.texture(slot)
 		card.pressed.connect(game.select_cop.bind(index))
 		cards.add_child(card)
 		card_nodes.append(card)
@@ -132,7 +156,7 @@ func refresh() -> void:
 		card_nodes[i].tooltip_text = "%s · %d/%d AP · 数字键 %d\n%s" % [c.name, c.ap, c.max_ap, i+1, "阵亡" if c.dead else "点击选中；点击战场中的本人打开动作菜单"]
 		card_nodes[i].queue_redraw()
 	points.text = str(game.state.points)
-	turn_button.text = "敌人行动中" if game.busy else "结束回合"
+	turn_button.text = "敌人行动中" if game.state.phase=="enemy" else "请稍候…" if game.busy else "结束回合"
 	turn_button.disabled = game.busy or game.state.phase != "player"
 	turn_paper.modulate = Color("#a9a49a") if game.busy else Color.WHITE
 	_rebuild_equipment()
@@ -232,8 +256,24 @@ func _rebuild_equipment() -> void:
 
 func toggle_equipment() -> void:
 	pinned = not pinned
-	drawer.visible = pinned
-	compact.visible = not drawer.visible
+	drawer_hover = false
+	if not pinned: hover_suppressed = compact.get_global_rect().has_point(pointer_position)
+	set_drawer(pinned)
+
+func set_drawer(open: bool) -> void:
+	if drawer_open == open: return
+	drawer_open = open
+	if drawer_tween != null and drawer_tween.is_valid(): drawer_tween.kill()
+	if open: drawer.show()
+	# Closing is visual only: immediately release its input blocking region.
+	drawer.mouse_filter = Control.MOUSE_FILTER_STOP if open else Control.MOUSE_FILTER_IGNORE
+	drawer.mouse_behavior_recursive = Control.MOUSE_BEHAVIOR_ENABLED if open else Control.MOUSE_BEHAVIOR_DISABLED
+	sections.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	compact.visible = not open
+	drawer_tween = create_tween()
+	drawer_tween.tween_property(self,"drawer_progress",1.0 if open else 0.0,.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	drawer_tween.tween_callback(func():
+		if not drawer_open: drawer.hide())
 
 func add_slot(rect: Rect2) -> void:
 	var slot := SLOT.new()
@@ -244,27 +284,42 @@ func add_slot(rect: Rect2) -> void:
 func collapse() -> void:
 	pinned = false
 	drawer_hover = false
-	drawer.hide()
+	hover_suppressed = compact.get_global_rect().has_point(pointer_position)
+	set_drawer(false)
 	compact.show()
 
 func _process(delta: float) -> void:
 	if game == null: return
+	awareness_clock-=delta
+	if awareness_clock<=0 and game.state!=null:
+		awareness_clock=.1
+		var info: Dictionary=game.state.awareness_summary()
+		var signature:=str(info)
+		if signature!=last_awareness:
+			last_awareness=signature
+			awareness_label.text=info.text
+			awareness_label.tooltip_text=info.detail+"\n黄色 ? 为怀疑，红色 ! 为已发现；未确认暴露不代表安全。"
+			awareness_label.add_theme_color_override("font_color",Color("#ff7865") if info.kind=="combat" else UI.GOLD if info.kind!="unknown" else Color("#c1c7be"))
+			awareness_label.modulate.a=.55
+			MOTION.animate(awareness_label,"awareness",^"modulate:a",1.0,.18)
 	if game.dialog.visible or (game.inventory_panel != null and game.inventory_panel.visible) or (game.wheel != null and game.wheel.visible) or (game.modal != null and game.modal.visible):
-		drawer.hide()
+		set_drawer(false)
 		compact.visible = game.wheel == null or not game.wheel.visible
 		return
 	var inside := drawer.get_global_rect().has_point(pointer_position)
-	if drawer.visible and inside: leave_delay = 0.2
+	if drawer_open and inside: leave_delay = 0.2
 	elif not pinned:
 		leave_delay -= delta
 		if leave_delay <= 0:
 			drawer_hover = false
-			drawer.hide()
-	if pinned: drawer.show()
-	compact.visible = not drawer.visible
+			set_drawer(false)
+	if pinned: set_drawer(true)
+	compact.visible = not drawer_open
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion: pointer_position = event.position
+	if event is InputEventMouseMotion:
+		pointer_position = event.position
+		if compact != null and not compact.get_global_rect().has_point(pointer_position): hover_suppressed = false
 
 func _draw() -> void:
 	draw_line(Vector2(0, 43), Vector2(size.x, 43), UI.GOLD, 1)

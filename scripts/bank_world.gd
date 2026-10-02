@@ -14,7 +14,8 @@ const ENEMY_ANIMATOR = preload("res://scripts/bank_enemy_animator.gd")
 const NAV = preload("res://scripts/bank_navigation.gd")
 const SOURCE_POSE = preload("res://scripts/bank_cop_source_pose.gd")
 const BANK_SCENE: PackedScene = preload("res://assets/bank/original_scene/bank_original.gltf")
-const COP_RIG: PackedScene = preload("res://assets/characters/original_cop/cop_rig.gltf")
+const COP_RIG: PackedScene = preload("res://assets/horde/actors/cop/cop_rig.gltf")
+const WEAPON_MOTION=preload("res://scripts/horde_actor_motion.gd")
 const ENEMY_MALE_RIG: PackedScene = preload("res://assets/characters/original_enemy_male/enemy_male_rig.gltf")
 const HOSTAGE_PROSTITUTE_RIG: PackedScene = preload("res://assets/characters/original_hostage_prostitute/hostage_prostitute_v1_rig.gltf")
 const DOOR_PREFABS := [
@@ -93,6 +94,8 @@ var cover_openings: Dictionary = {}
 var posture_time: Array[float] = [0.0, 0.0, 0.0]
 var low_cover: Array[bool] = [false, false, false]
 var preview_time := 0.0
+var cop_weapon_rigs: Array=[]
+var scout_mesh: MeshInstance3D
 
 func _process(delta: float) -> void:
 	if interaction_source.is_empty(): return
@@ -373,6 +376,8 @@ func _play_cop_step(index: int, foot: String) -> void:
 		cop_step_players[index].play()
 
 func reset_cop_motion() -> void:
+	for rig in cop_weapon_rigs: rig.release_action();rig.set_process(false)
+	if scout_mesh!=null: scout_mesh.hide()
 	for gesture in cop_gesture_tweens.values():
 		(gesture as Tween).kill()
 	cop_gesture_tweens.clear()
@@ -477,6 +482,21 @@ func play_cop_gesture(index: int, tile: Vector2i, action: int) -> Dictionary:
 		var heading := node.rotation.y + wrapf(atan2(-direction.x, -direction.z) - node.rotation.y, -PI, PI)
 		turn_time = minf(0.18, absf(heading - node.rotation.y) / 12.0)
 		if turn_time > 0.001: tween.tween_property(node, "rotation:y", heading, turn_time).set_trans(Tween.TRANS_SINE)
+	if action in [10,11,35]:
+		var motion=cop_weapon_rigs[index]
+		var phases: Array=["gun_shooting_standing_start","gun_shooting_standing_shoot","gun_shooting_standing_end"] if action==10 else ["idle_reload" if action==11 else "interact"]
+		var total:=turn_time
+		var impact:=turn_time
+		for phase: String in phases:
+			if phase=="gun_shooting_standing_shoot" or action!=10: impact=total+float(motion.event_time(phase))
+			tween.tween_callback(func(): motion.heading=node.rotation.y;motion.start_clip(phase,true);motion.set_process(true))
+			tween.tween_interval(motion.duration(phase))
+			total+=float(motion.duration(phase))
+		# Keep this controller as the sole skeleton owner during the gesture.
+		tween.tween_callback(func():
+			motion.release_action();motion.set_process(false)
+			cop_gesture_tweens.erase(index);cop_active_clips.erase(index))
+		return {"impact":impact,"duration":total,"clip":phases[0]}
 	var clip: String = {1: "baton_attack", 5: "arresting", 38: "door_window_open_shortright"}.get(action, "")
 	var timing := {"impact": 0.5, "duration": 1.0, "clip": clip}
 	if not clip.is_empty():
@@ -731,8 +751,35 @@ func _original_cop(person_name: String) -> Node3D:
 	var model := COP_RIG.instantiate() as Node3D
 	person.add_child(model)
 	_configure_original_cop(model)
+	var motion=WEAPON_MOTION.new()
+	motion.name="WeaponMotion"
+	person.add_child(motion)
+	motion.initialize(model);motion.configure_weapons(model)
+	motion.gun="Glock";motion.update_weapons();motion.set_process(false)
+	cop_weapon_rigs.append(motion)
 	cop_outlines.append(_attach_person_outline(model, Color("#47a8d5")))
 	return person
+
+func show_room_scout(ids: Array,room: int) -> void:
+	if scout_mesh==null:
+		scout_mesh=MeshInstance3D.new();scout_mesh.name="ScoutRoomHighlight"
+		scout_mesh.mesh=ImmediateMesh.new()
+		var material:=StandardMaterial3D.new()
+		material.albedo_color=Color(.35,.72,.88,.22)
+		material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.cull_mode=BaseMaterial3D.CULL_DISABLED
+		scout_mesh.material_override=material
+		scout_mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(scout_mesh)
+	var mesh:=scout_mesh.mesh as ImmediateMesh
+	mesh.clear_surfaces();mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	for x in range(GRID_W):
+		for y in range(GRID_H):
+			if int(ids[x*GRID_H+y])!=room: continue
+			var at:=_grid(Vector2i(x,y),.15)
+			for corner in [Vector3(-.7,0,-.7),Vector3(.7,0,-.7),Vector3(.7,0,.7),Vector3(-.7,0,-.7),Vector3(.7,0,.7),Vector3(-.7,0,.7)]: mesh.surface_add_vertex(at+corner)
+	mesh.surface_end();scout_mesh.show()
 
 func _original_enemy(person_name: String) -> Node3D:
 	var person := Node3D.new()

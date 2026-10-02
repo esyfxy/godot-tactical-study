@@ -82,7 +82,7 @@ static func collect(s, c: Dictionary, tile: Vector2i, mode: String) -> bool:
 			var entry := store(s, c, item, ammo)
 			if mode == "equip": equip(s, c, int(entry.uid))
 			c.reserve[item] = int(c.reserve.get(item, 0)) + extra
-		"Ammo": c.reserve[item] = int(c.reserve.get(item, 0)) + (3 if item in ["Rifle", "Shotgun"] else int(s.CAPACITY[item]))
+		"Ammo": c.reserve[item] = int(c.reserve.get(item, 0)) + int(record.get("amount",3 if item in ["Rifle", "Shotgun"] else int(s.CAPACITY[item])))
 		"Equipment":
 			if item in ["BodyArmor", "Helmet"]:
 				var entry := store(s, c, item, 0, 2 if item == "BodyArmor" else 1)

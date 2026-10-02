@@ -28,6 +28,9 @@ func _draw() -> void:
 		var c: Dictionary = state.cops[i]
 		if c.dead: continue
 		draw_circle(to_pixel(c.pos), 4 if i == selected else 3, Color("#ffe33c") if i == selected else Color("#87d9fa"))
+	if state.has_method("hostage_visible"):
+		for h: Dictionary in state.hostages:
+			if state.discovered_hostages.has(h.id): draw_circle(to_pixel(h.pos),3,Color("#89e7ba") if h.rescued else Color("#f6e1a5"))
 	draw_rect(Rect2(Vector2.ZERO, size), Color("#bca853"), false, 1)
 
 func _gui_input(event: InputEvent) -> void:

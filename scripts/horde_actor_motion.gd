@@ -35,6 +35,7 @@ var locomotion_clip := "run_0"
 var melee := ""
 var machinegun := false
 var source_prefab := ""
+const FALL_TIME_LIMIT:=1.15
 signal footstep(foot: String)
 
 func configure_weapons(model: Node3D) -> void:
@@ -122,6 +123,29 @@ func start_clip(clip: String, hold := false) -> void:
 	blend_from.clear()
 	for i in range(skeleton.get_bone_count()): blend_from.append(skeleton.get_bone_pose(i))
 	update_weapons()
+
+func release_action() -> void:
+	# Keep the end pose as the blend source, not a one-frame reset to idle.
+	action_clip = ""
+	action_hold = false
+
+func is_prone() -> bool:
+	return skeleton!=null and hips>=0 and wounded=="躯干" and skeleton.get_bone_pose_position(hips).y<hips_rest.y-.4
+
+func start_fall(speed:=1.0) -> float:
+	wounded="躯干"
+	playback_speed=maxf(speed,duration("idle_body_damage")/FALL_TIME_LIMIT)
+	start_clip("idle_body_damage")
+	return duration("idle_body_damage")/playback_speed
+
+func start_death(clip: String="idle_body_damage",speed:=1.0) -> float:
+	# A prone bleeding victim is already on the floor. Never replay a fall
+	# whose opening pose is standing; the source dead_on_back is its endpoint.
+	if is_prone(): clip="dead_on_back"
+	dead=true
+	playback_speed=speed if clip=="dead_on_back" else maxf(speed,duration(clip)/FALL_TIME_LIMIT)
+	start_clip(clip,true)
+	return duration(clip)/playback_speed
 
 func hand_rotation(clip: String,side: String,time: float) -> Quaternion:
 	var q := Quaternion(-POSE.sample(clips,clip,side+"HandQ.x",time),-POSE.sample(clips,clip,side+"HandQ.y",time),POSE.sample(clips,clip,side+"HandQ.z",time),POSE.sample(clips,clip,side+"HandQ.w",time)).normalized()

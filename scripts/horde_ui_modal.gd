@@ -7,6 +7,7 @@ var mode := ""
 var content: Control
 var buttons: Dictionary = {}
 var subtitle: Label
+var developer = preload("res://scripts/horde_developer.gd").new()
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -26,6 +27,8 @@ func _ready() -> void:
 	add_child(content)
 	resized.connect(fit)
 	hide()
+	developer.modal = self
+	developer.game = game
 
 func paper(rect: Rect2, tint: Color) -> Control:
 	var p := PAPER.new()
@@ -71,12 +74,13 @@ func present_pause() -> void:
 	buttons.speed = UI.button(content, "敌方播放速度：" + ("2×" if game.quick_enemy else "1×"), Rect2(728, 341, 464, 55), func(): game.change_setting("enemy_speed",1.0 if game.quick_enemy else 2.0); present_pause(), 26)
 	buttons.menu = UI.button(content, "主菜单…", Rect2(728, 404, 464, 55), func(): game._dialog_confirm("menu"), 29)
 	buttons.help = UI.button(content, "操作说明", Rect2(728, 467, 464, 55), func(): close(); game.show_help(), 29)
-	buttons.weather = UI.button(content, "天气：" + game.world.WEATHER_NAMES[game.world.weather_index] + "（无遮挡）", Rect2(728, 527, 464, 55), func(): game.world.cycle_weather(); present_pause(), 25)
+	buttons.weather = UI.button(content, "天气：" + game.world.WEATHER_NAMES[game.world.weather_index] + "（无遮挡）", Rect2(728, 527, 464, 55), func(): game.change_setting("weather",(game.world.weather_index+1)%game.world.WEATHER_NAMES.size()); present_pause(), 25)
 	buttons.save = UI.button(content,"保存战局",Rect2(728,590,464,55),func():
 		var ok: bool = game.save_game()
 		buttons.save.text = "已保存" if ok else "保存失败，请查看提示",29)
 	buttons.settings = UI.button(content,"声音与视角设置",Rect2(728,653,464,55),present_settings,29)
-	UI.text(content, "义军呐喊 · 第 %d 回合 / 第 %d 波" % [game.state.turn, game.state.wave], Rect2(730, 744, 460, 38), 22, Color("#b3ab96"), true)
+	if OS.is_debug_build(): buttons.developer = UI.button(content,"开发者测试 [F8]",Rect2(728,709,464,45),game.show_developer,24)
+	UI.text(content, "义军呐喊 · 第 %d 回合 / 第 %d 波" % [game.state.turn, game.state.wave], Rect2(730, 762, 460, 38), 22, Color("#b3ab96"), true)
 	UI.text(content, "你的回合开始时自动保存 · Esc 返回", Rect2(724, 796, 472, 35), 20, Color("#b3ab96"), true)
 
 func settings_slider(title: String,key: String,y: float,minimum: float,maximum: float,step: float) -> void:
@@ -147,7 +151,9 @@ func close() -> void:
 func _input(event: InputEvent) -> void:
 	if not visible: return
 	if event is InputEventKey and event.pressed:
-		if event.keycode == KEY_ESCAPE: close()
+		if event.keycode == KEY_ESCAPE or (mode=="developer" and event.keycode==KEY_F8):
+			close()
+		elif mode=="developer": return # Let SpinBox editors and dropdowns receive keys.
 		get_viewport().set_input_as_handled()
 
 func _gui_input(event: InputEvent) -> void:

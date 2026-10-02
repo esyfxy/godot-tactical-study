@@ -34,11 +34,15 @@ var seed_value := 0
 var backup_spawned := false
 var flow: Dictionary = {}
 var flow_revision := -1
+var ai_objectives: Array[Vector2i] = []
 var presentation_events: Array = []
 var viewing_positions: Dictionary = {}
 var reaction_queue: Array = []
 var last_seen: Dictionary = {}
 var observed_events: Array = []
+var awareness_cache_signature: Array = []
+var awareness_cache: Dictionary = {}
+var awareness_cache_builds := 0
 const COMMAND_COST = {"Overwatch":20,"Accuracy":40,"Haste":50,"ShockAndAwe":300}
 
 func command_reason(command: String) -> String:
@@ -121,6 +125,7 @@ func initialize(source: Dictionary, random_seed: int = -1) -> void:
 	else: rng.seed = random_seed
 	seed_value = rng.seed
 	nav.configure(data)
+	ai_objectives = ENEMY_AI.map_objectives(self)
 	points = int(params.InitialRebelPointsHordeMode)
 	var pool: Array = data.employees.slice(0, 26).duplicate(true)
 	var types: Dictionary = {}
@@ -152,7 +157,7 @@ func unit(unit_name: String, tile: Vector2i, side: String) -> Dictionary:
 	return {"id": next_id, "name": unit_name, "pos": tile, "side": side, "ap": 2, "max_ap": 2,
 		"dead": false, "captured": false, "stun": 0, "surrender": false, "bleed": 0, "wound": "",
 		"armor": 0, "helmet": false, "skills": [], "speed": 0, "strength": 0, "shooting": 0,
-		"weapons": {}, "reserve": {}, "supplies": {}, "bag": [], "gun": "", "counter": false, "skill_used": false}
+		"weapons": {}, "reserve": {}, "supplies": {}, "bag": [], "gun": "", "counter": false, "skill_used": false,"facing":Vector2i.DOWN}
 
 func say(message: String) -> void:
 	log.append(message)
@@ -182,6 +187,73 @@ func remember_event(event: Dictionary,actor_visible: bool,target_visible: bool) 
 
 func living_cops() -> Array:
 	return cops.filter(func(c): return not c.dead)
+
+func cop_awareness(c: Dictionary) -> String:
+	return awareness_snapshot().cops.get(c.id,"unknown")
+
+func awareness_snapshot() -> Dictionary:
+	# State dictionaries are also edited by AI, save restore and developer tools.
+	# Fingerprint their values, not just a timer/frame, so same-frame mutations
+	# and tween viewing positions invalidate the shared read-only UI snapshot.
+	var signature: Array = [turn,nav.revision,viewing_positions.hash(),awareness_extra_signature()]
+	for u: Dictionary in cops+enemies: signature.append(u.hash())
+	if signature == awareness_cache_signature and not awareness_cache.is_empty(): return awareness_cache
+	awareness_cache_signature=signature
+	awareness_cache_builds+=1
+	var visible: Dictionary={}
+	var enemy_kinds: Dictionary={}
+	for e: Dictionary in active_enemies():
+		enemy_kinds[e.id]=ENEMY_AI.awareness(self,e)
+		# Incapacitated enemies never contribute to cop awareness.
+		if conscious(e) and not e.surrender: visible[e.id]=visible_enemy(e)
+	var cop_kinds: Dictionary={}
+	for c: Dictionary in living_cops(): cop_kinds[c.id]=_cop_awareness(c,visible,enemy_kinds)
+	awareness_cache={"cops":cop_kinds,"enemies":enemy_kinds,"summary":_awareness_summary(cop_kinds)}
+	return awareness_cache
+
+func awareness_extra_signature() -> int:
+	return 0
+
+func _cop_awareness(c: Dictionary,visible: Dictionary,enemy_kinds: Dictionary) -> String:
+	var rank:=0
+	for e: Dictionary in active_enemies():
+		if not conscious(e) or e.surrender: continue
+		if int(c.id) in e.get("visible_ids",[]): return "combat"
+		var memory: Dictionary=e.get("known",{}).get(c.id,{})
+		if not memory.is_empty() and turn-int(memory.turn)<=ENEMY_AI.MEMORY_TURNS: rank=maxi(rank,3)
+		# Suspicion/hearing of hidden enemies must not expose their location/state.
+		if not visible.get(e.id,false): continue
+		var suspicion: Dictionary=e.get("suspected",{})
+		if not suspicion.is_empty() and int(suspicion.cop)==int(c.id) and turn-int(suspicion.last_turn)<=1: rank=maxi(rank,2)
+		if enemy_kinds.get(e.id,"inactive") in ["investigate","search"]: rank=maxi(rank,1)
+	return ["unknown","investigate","suspicious","track"][rank]
+
+func awareness_event(e: Dictionary,c: Dictionary,confirmed: bool) -> void:
+	var visible:=visible_enemy(e)
+	if not confirmed and not visible: return
+	var text: String=(str(e.name) if visible else "视野外敌人")+(" 已发现 "+str(c.name)+"。" if confirmed else " 对 "+str(c.name)+" 起疑，尚未确认身份。")
+	# Own officer's location is known; never record a hidden witness's tile.
+	var at: Vector2i=viewing_positions.get(c.id,c.pos)
+	observed_events.append({"turn":turn,"text":text,"tile":at})
+	if observed_events.size()>30: observed_events.pop_front()
+	say(text)
+
+func awareness_summary() -> Dictionary:
+	return awareness_snapshot().summary
+
+func _awareness_summary(cop_kinds: Dictionary) -> Dictionary:
+	var result:={"kind":"unknown","text":"未确认暴露","detail":"不代表安全，注意朝向与声响"}
+	var ranking:={"unknown":0,"investigate":1,"suspicious":2,"track":3,"combat":4}
+	for c: Dictionary in living_cops():
+		var kind: String=cop_kinds.get(c.id,"unknown")
+		if int(ranking[kind])<=int(ranking[result.kind]): continue
+		result.kind=kind
+		match kind:
+			"combat": result.text="已被发现 · "+str(c.name);result.detail="敌人已确认警员身份"
+			"track": result.text="脱离目击 · 仍被追踪";result.detail="敌人记得最后位置，不等于当前位置"
+			"suspicious": result.text="引起怀疑 · "+str(c.name);result.detail="尚未确认身份，及时脱离视线"
+			"investigate": result.text="敌人调查或搜索中";result.detail="听到声响不等于看见警员"
+	return result
 
 func conscious(u: Dictionary) -> bool:
 	return not u.dead and not u.captured and int(u.stun)==0 and u.wound!="躯干"
@@ -288,6 +360,7 @@ func open(c: Dictionary, index: int) -> bool:
 			return false
 	nav.open_edge(index)
 	ENEMY_AI.noise(self,c.pos,"door")
+	for enemy: Dictionary in active_enemies(): ENEMY_AI.observe(self,enemy)
 	c.ap -= 1
 	say("%s 打开入口，消耗 1 AP。" % c.name)
 	return true
@@ -300,6 +373,7 @@ func close_entry(c: Dictionary, index: int) -> bool:
 	nav.edges[index] = 10 if k == 3 else 11
 	nav.rebuild()
 	ENEMY_AI.noise(self,c.pos,"door")
+	for enemy: Dictionary in active_enemies(): ENEMY_AI.observe(self,enemy)
 	c.ap -= 1
 	say("%s 关闭入口，消耗 1 AP。" % c.name)
 	return true
@@ -316,6 +390,9 @@ func enemy_visible_at(e: Dictionary,tile: Vector2i) -> bool:
 	for c: Dictionary in living_cops():
 		if not conscious(c): continue
 		var at: Vector2i = viewing_positions.get(c.id,c.pos)
+		# Each cover opening shifts at most one cell. Both ends may lean,
+		# so distance > range+2 is provably unreachable, even around cover.
+		if Vector2(tile).distance_to(Vector2(at))>current_shot_range(e)+2.0: continue
 		if nav.targeting(tile,at,current_shot_range(e),cover_enabled(e),cover_enabled(c),occupied(e.id)).clear: return true
 	return false
 
@@ -415,6 +492,7 @@ func hit(attacker: Dictionary, target: Dictionary, part: String) -> void:
 
 func fire(c: Dictionary, e: Dictionary, part := "躯干", aimed := false, retry := false) -> void:
 	if c.gun == "" or int(c.weapons.get(c.gun, 0)) <= 0: return
+	c.facing=Vector2i(e.pos)-Vector2i(c.pos)
 	var detail := shot_details(c,e,part,aimed)
 	var probability: float = detail.chance
 	c.weapons[c.gun] -= 1
@@ -433,7 +511,7 @@ func fire(c: Dictionary, e: Dictionary, part := "躯干", aimed := false, retry 
 			say("肾上腺素：追加一枪。")
 			fire(c, e, part, aimed, true)
 
-func attack(c: Dictionary, e: Dictionary, action: String, part := "躯干") -> bool:
+func attack(c: Dictionary, e: Dictionary, action: String, part := "躯干", presented := false) -> bool:
 	var reason := action_reason(c, e, action)
 	if not reason.is_empty():
 		say(reason)
@@ -459,12 +537,20 @@ func attack(c: Dictionary, e: Dictionary, action: String, part := "躯干") -> b
 			e.stun = 2
 			say("%s 被电击，暂时失去行动能力。" % e.name)
 		"grenade":
-			ENEMY_AI.noise(self,e.pos,"grenade")
 			c.supplies.Grenade -= 1
-			for target in active_enemies() + living_cops():
-				if Vector2(target.pos).distance_to(Vector2(e.pos)) <= 2.5 and nav.clear_shot(e.pos, target.pos): target.stun = 2
-			say("震撼弹爆炸：范围内敌我单位均被击晕。")
+			if presented: action_event(c,e,"grenade","震撼弹")
+			else: grenade_impact(e.pos)
 	return true
+
+func grenade_impact(tile: Vector2i) -> Array:
+	ENEMY_AI.noise(self,tile,"grenade")
+	var affected: Array = []
+	for target in active_enemies() + living_cops():
+		if Vector2(target.pos).distance_to(Vector2(tile)) <= 2.5 and nav.clear_shot(tile,target.pos):
+			target.stun = 2
+			affected.append(target.id)
+	say("震撼弹爆炸：范围内 %d 名敌我单位被击晕。" % affected.size())
+	return affected
 
 func _arrest(e: Dictionary) -> void:
 	e.captured = true
@@ -517,11 +603,12 @@ func next_wave_in() -> int:
 	if turn < int(params.HordeWarmUpTurns): return int(params.HordeWarmUpTurns) - turn
 	return (int(params.HordeEnemySpawnTurns) - (turn - int(params.HordeWarmUpTurns)) % int(params.HordeEnemySpawnTurns)) % int(params.HordeEnemySpawnTurns)
 
-func spawn_wave() -> void:
+func spawn_wave(count_override := -1, prefab_override := "", with_loot := true) -> void:
 	# The original mission removes previous corpses before the next wave.
 	enemies = enemies.filter(func(e): return not e.dead and not e.captured)
 	wave += 1
 	var count := int(params.HordeEnemyCount) + wave - 1
+	if count_override >= 0: count = clampi(count_override, 0, 100)
 	var spots: Array = data.enemy_spawns.duplicate()
 	var occupied_cells := occupied()
 	var spawned := 0
@@ -537,6 +624,7 @@ func spawn_wave() -> void:
 			if Vector2(c.pos).distance_to(Vector2(tile)) < 15.0: close = true
 		if close: continue
 		var e := unit("罪犯 %d" % next_id, tile, "enemy")
+		e.alerted=true
 		var tier := 0
 		for i in range(3):
 			if variants[i] > 0:
@@ -545,6 +633,9 @@ func spawn_wave() -> void:
 				break
 		e.tier = tier
 		var prefab: String = enemy_loadouts.tiers[tier-1] if tier>0 else enemy_loadouts.random[rng.randi_range(0,enemy_loadouts.random.size()-1)]
+		if enemy_loadouts.prefabs.has(prefab_override):
+			prefab = prefab_override
+			e.tier = enemy_loadouts.tiers.find(prefab)+1
 		var loadout: Dictionary = enemy_loadouts.prefabs[prefab]
 		e.source_prefab = prefab
 		e.gun = loadout.gun
@@ -556,7 +647,7 @@ func spawn_wave() -> void:
 		enemies.append(e)
 		occupied_cells[tile] = true
 		spawned += 1
-	if wave > 1: spawn_loot()
+	if wave > 1 and with_loot: spawn_loot()
 	say("第 %d 波：%d 名敌人入场；搜集补给并保持队员存活。" % [wave, spawned])
 
 func begin_enemy_turn() -> void:

@@ -39,12 +39,57 @@ var gear_ribbon: Control
 var turn_banner: Label
 var turn_banner_tween: Tween
 var inventory_label: Label
+const COMPLETION=preload("res://scripts/bank_completion.gd")
+var room_data: Dictionary={}
+var scouted_rooms: Dictionary={}
+var healed_cops: Dictionary={}
+var sniper_active:=false
+var sniper_cooldown:=0
+var closing_check:=false
 
 func _load_source() -> void:
 	super._load_source()
 	interaction_data = JSON.parse_string(FileAccess.get_file_as_string("res://assets/bank/interaction_data.json")) as Dictionary
+	room_data=JSON.parse_string(FileAccess.get_file_as_string("res://assets/bank/room_data.json"))
+	room_data.no_sniper_rooms=room_data.no_sniper_rooms.map(func(id): return int(id))
 	for record in interaction_data["notes"]:
 		note_records[Vector2i(int(record["x"]), int(record["y"]))] = record
+
+func room_id(tile: Vector2i) -> int:
+	# BattleGrid.GetCellIndex is X-major, unlike the tactical edge array.
+	return int(room_data.room_ids[tile.x*GRID_H+tile.y]) if _inside(tile) else 0
+
+func note_target(hint: Vector2i) -> Dictionary:
+	for tile: Vector2i in note_records:
+		if Vector2(tile-hint).length()<=1.45: return {"kind":"note","tile":tile}
+	return {"kind":"note","tile":hint}
+
+func _observe_room(tile: Vector2i) -> void:
+	var room:=room_id(tile)
+	scouted_rooms[room]=true
+	sniper_active=false
+	sniper_cooldown=3
+	var threats:=0
+	var civilians:=0
+	for e in guards:
+		if room_id(e.pos)==room and e.state not in ["倒地","已逮捕","逃离"]: threats+=1
+	for h in hostages:
+		if room_id(h.pos)==room and h.state!="已获救": civilians+=1
+	camera_origin=tile-Vector2i(14,9)
+	bank_world.show_room_scout(room_data.room_ids,room)
+	dialog.present("scout","什韦茨 · 房间侦察","房间 %d 已观察：罪犯 %d，人质 %d。\n警员行动点未消耗；狙击侦察冷却 3 回合。\n关闭报告后继续行动。"%[room,threats,civilians],"收到，继续")
+	_sync_world()
+
+func _check_completion() -> void:
+	if finished or closing_check or _busy() or title_overlay.visible: return
+	if not guards.all(func(e): return e.state in ["倒地","已逮捕","逃离"]) or not hostages.all(func(h): return h.state=="已获救"): return
+	closing_check=true
+	finished=true
+	_close_menu()
+	action_player.stream=VICTORY_SOUND;action_player.play()
+	dialog.present("victory","银行行动完成","全部威胁已解除，全部人质已解救。\n行动回合：%d\n\n任务完成，可重新挑战或返回模式选择。"%turn_number,"返回模式选择")
+	dialog.add_choice("重新开始银行教学关","replay_bank")
+	closing_check=false
 
 func _dialog_open() -> bool:
 	return dialog != null and dialog.visible
@@ -55,7 +100,7 @@ func _show_pause_menu() -> void:
 		return
 	_close_menu()
 	var inventory := ""
-	for i in range(cops.size()): inventory += "%s：撬锁工具 ×%d\n" % [CARD_NAMES[i + 1], int(cops[i].get("lockpicks", 0))]
+	for i in range(cops.size()): inventory += "%s：手枪 %d/9 发 · 急救包 ×%d · 撬锁工具 ×%d\n" % [CARD_NAMES[i + 1], int(cops[i].ammo), int(cops[i].get("medkits", 0)), int(cops[i].get("lockpicks", 0))]
 	dialog.present("pause", "银行 · 游戏菜单", "回合 %d\n\n%s\n可重读已收集的纸条；重开关卡会清除本局进度。" % [turn_number, inventory], "重新开始关卡…")
 	dialog.add_choice("返回模式选择…", "mode_menu")
 	for tile in note_records:
@@ -63,6 +108,8 @@ func _show_pause_menu() -> void:
 	_sync_world()
 
 func _dialog_confirm(value: String) -> void:
+	if value=="replay_bank": dialog.hide();_reset_mission();_start_tutorial();return
+	if dialog.mode=="victory": get_tree().change_scene_to_file("res://scenes/mode_menu.tscn");return
 	if value == "mode_menu":
 		dialog.present("mode_menu_confirm", "返回模式选择？", "当前银行关进度将清除；可选择银行或义军呐喊重新开始。", "返回模式选择")
 		dialog.cancel.show()
@@ -112,6 +159,9 @@ func _read_note(tile: Vector2i, actor: int) -> void:
 		cops[actor]["lockpicks"] = int(cops[actor].get("lockpicks", 0)) + 1
 		reward = "\n\n获得：撬锁工具 ×1（%s携带）。" % CARD_NAMES[actor + 1]
 	inspected[tile] = true
+	for step: Dictionary in steps:
+		var hint:=Vector2i(int(step.X),int(step.Y))
+		if int(step.AllowedAction)==33 and Vector2(tile-hint).length()<=1.45: inspected[hint]=true
 	_show_notice("已收集纸条，可在齿轮菜单重新阅读。")
 	dialog.present("note", "纸条 · " + str(record["title"]), str(record["text"]) + reward, "收好纸条，继续")
 	_sync_world()
@@ -138,7 +188,7 @@ func _update_hud_layout() -> void:
 	title_label.position = Vector2(110, 9) * s
 	title_label.add_theme_font_size_override("font_size", maxi(11, roundi(17 * s)))
 	for i in range(4):
-		var active := i == selected_cop + 1
+		var active := i == 0 if sniper_active else i == selected_cop + 1
 		var width := (106.0 if active else 78.0) * s
 		var height := (210.0 if active else 154.0) * s
 		var center_x := size.x * 0.5 + (-265 + i * 132) * s
@@ -162,7 +212,7 @@ func _update_hud_layout() -> void:
 		card_labels[i].size = bar.size
 		card_labels[i].add_theme_font_size_override("font_size", maxi(10, roundi(13 * s)))
 		card_labels[i].add_theme_color_override("font_color", Color("#211c12") if active else Color("#fff1bd"))
-		cop_cards[i].tooltip_text = "狙击侦察尚未接入" if i == 0 else "%s · %d/2 行动点" % [CARD_NAMES[i], int(cops[i - 1]["ap"])]
+		cop_cards[i].tooltip_text = "房间侦察 · 冷却 %d 回合"%sniper_cooldown if i == 0 else "%s · %d/2 行动点" % [CARD_NAMES[i], int(cops[i - 1]["ap"])]
 	turn_button.position = Vector2(size.x - 315 * s, 0)
 	turn_button.size = Vector2(276, 82) * s
 	turn_button.add_theme_font_size_override("font_size", maxi(14, roundi(22 * s)))
@@ -173,8 +223,8 @@ func _update_hud_layout() -> void:
 		turn_banner.size = Vector2(size.x, 76 * s)
 	if inventory_label != null:
 		inventory_label.position = Vector2(145, 8)
-		inventory_label.size = Vector2(320, 24)
-		inventory_label.text = "%s · 撬锁工具 ×%d" % [CARD_NAMES[selected_cop + 1], int(cops[selected_cop].get("lockpicks", 0))] if not cops.is_empty() else ""
+		inventory_label.size = Vector2(410, 24)
+		inventory_label.text = "%s · 急救包 ×%d · 撬锁工具 ×%d" % [CARD_NAMES[selected_cop + 1], int(cops[selected_cop].get("medkits", 0)), int(cops[selected_cop].get("lockpicks", 0))] if not cops.is_empty() else ""
 
 func _process(delta: float) -> void:
 	if bank_world == null or cops.is_empty(): return
@@ -187,6 +237,7 @@ func _process(delta: float) -> void:
 		hover_tile = Vector2i(-1, -1)
 		_show_notice("移动完成。下一步见目标旁提示；仍可自由选择角色和目的地。")
 	was_moving = moving
+	_check_completion()
 	_update_guide_marker()
 	if feedback != null: feedback.visible = notice_age < 4.0 and not title_overlay.visible and not action_wheel.visible and not sidebar.visible and not _dialog_open()
 
@@ -353,6 +404,7 @@ func _reset_mission() -> void:
 	guide_enabled = true
 	guide_visited.clear()
 	completed_actions.clear()
+	scouted_rooms.clear();healed_cops.clear();sniper_active=false;sniper_cooldown=0
 	hover_tile = Vector2i(-1, -1)
 	recommendation.clear()
 	inspected.clear()
@@ -364,7 +416,7 @@ func _reset_mission() -> void:
 	if turn_banner != null: turn_banner.hide()
 	_close_menu()
 	super._reset_mission()
-	for cop in cops: cop["lockpicks"] = 0
+	for cop in cops: cop["lockpicks"] = 0;cop["medkits"]=1
 	notice = "先用利维接近银行：蓝色人物是落点预览，单击其脚下格子移动。"
 	_update_ui()
 
@@ -378,15 +430,19 @@ func _focus_step() -> void:
 func _select_cop(index: int) -> void:
 	if _dialog_open(): return
 	if index < 0:
-		_show_notice("狙击手系统尚未实现；可操作右侧三名警员。")
+		if _busy(): return
+		if sniper_cooldown>0: _show_notice("狙击侦察冷却：%d 回合。"%sniper_cooldown);return
+		_close_menu();sniper_active=true
+		_show_notice("什韦茨已就位：点击有外窗的室内房间侦察。Esc 取消。")
 		return
+	sniper_active=false
 	selected_cop = index
 	hover_tile = Vector2i(-1, -1)
 	_close_menu()
 	_show_notice("已选择%s。点击目标查看动作及条件。" % CARD_NAMES[index + 1])
 
 func _busy() -> bool:
-	return action_busy or not bank_world.cop_motion_tweens.is_empty() or _dialog_open()
+	return finished or action_busy or not bank_world.cop_motion_tweens.is_empty() or _dialog_open()
 
 func _close_menu() -> void:
 	context_target = {}
@@ -435,7 +491,8 @@ func _on_world_input(event: InputEvent) -> void:
 		if guide_enabled and suggested.get("kind") == "ground" and suggested.get("tile") == floor_tile:
 			target = {"kind": "ground", "tile": floor_tile}
 		if target.get("kind") == "cop":
-			_select_cop(int(target["index"]))
+			if int(target["index"])==selected_cop or (int(cops[int(target["index"])].hp)<3 and Vector2(cops[selected_cop].pos-target.tile).length()<=1.45): _open_menu(target,event.position)
+			else: _select_cop(int(target["index"]))
 		elif target.get("kind") == "ground":
 			if not _inside(target["tile"]): return
 			var reason := _action_reason(-1, target)
@@ -472,12 +529,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			_locate_guidance()
 			return
 		if event.keycode == KEY_ESCAPE:
+			sniper_active=false
 			_close_menu()
 			_sync_world()
 			return
 		if event.keycode in [KEY_1, KEY_2, KEY_3]:
 			_select_cop(int(event.keycode) - KEY_1)
 			return
+		if event.keycode==KEY_R:
+			_perform_action(11,{"kind":"cop","index":selected_cop,"tile":cops[selected_cop].pos});return
 	super._unhandled_input(event)
 
 func _edge_tiles(edge: int) -> Array[Vector2i]:
@@ -490,6 +550,7 @@ func _opening_target(data: Dictionary, kind: String) -> Dictionary:
 		"password": str(interaction_data.get("doors", {}).get(str(edge), {}).get("password", ""))}
 
 func _pick_target(pixel: Vector2) -> Dictionary:
+	if sniper_active: return {"kind":"sniper","tile":bank_world.pick_tile(pixel)}
 	# Screen-space capsules include the head/body, not just a ray to the floor.
 	var best: Dictionary = {}
 	var best_depth := INF
@@ -528,6 +589,7 @@ func _pick_target(pixel: Vector2) -> Dictionary:
 	return _target_at(bank_world.pick_tile(pixel))
 
 func _target_at(tile: Vector2i) -> Dictionary:
+	if note_records.has(tile): return {"kind":"note","tile":tile}
 	for i in range(cops.size()):
 		if cops[i]["pos"] == tile:
 			return {"kind": "cop", "index": i, "tile": tile}
@@ -615,6 +677,8 @@ func _open_menu(target: Dictionary, at: Vector2) -> void:
 
 func _menu_actions(target: Dictionary) -> Array:
 	match str(target["kind"]):
+		"sniper": return [[60,"侦察房间"]]
+		"cop": return [[35,"使用急救包"],[11,"装填手枪"]] if int(target.index)==selected_cop else [[35,"为警员包扎"]]
 		"enemy": return [[14, "喝止"], [1, "警棍"], [3, "泰瑟枪"], [10, "射击"], [5, "逮捕"]]
 		"hostage": return [[55, "解救人质"]]
 		"door": return [[38, _opening_label(target)]]
@@ -650,7 +714,7 @@ func _movement_search() -> Dictionary:
 	return NAV.search(cop["pos"], float(cop["ap"] * cop["max_move"]) * 1.4, cells, grid_edges, opened_edges, _blocked_for_move())
 
 func _action_cost(id: int, target: Dictionary) -> int:
-	if id == 33:
+	if id in [11,33,60]:
 		return 0
 	if id == -1:
 		var distance := float(_movement_search()["costs"].get(target["tile"], INF))
@@ -659,10 +723,20 @@ func _action_cost(id: int, target: Dictionary) -> int:
 
 func _action_reason(id: int, target: Dictionary) -> String:
 	if _busy(): return "动作执行中"
+	if id==60:
+		if sniper_cooldown>0: return "狙击侦察冷却中"
+		var room:=room_id(target.tile)
+		return "该区域没有可供狙击手观察的外窗" if room==0 or room in room_data.no_sniper_rooms else ""
 	var cop: Dictionary = cops[selected_cop]
 	var tile: Vector2i = target["tile"]
 	var origin: Vector2i = cop["pos"]
-	if id != 33 and int(cop["ap"]) <= 0: return "行动力不足"
+	if id not in [11,33] and int(cop["ap"]) <= 0: return "行动力不足"
+	if id==11:
+		if int(target.get("index",-1))!=selected_cop: return "先选择此警员"
+		return "弹匣已满" if int(cop.ammo)>=9 else ""
+	if id==35:
+		if target.kind!="cop" or int(cops[int(target.index)].hp)>=3: return "目标没有伤势"
+		if int(cop.get("medkits",0))<=0: return "没有急救包"
 	if id == -1:
 		if tile == origin: return "已在此处"
 		if _blocked_for_move().has(tile): return "此格有人"
@@ -679,11 +753,21 @@ func _action_reason(id: int, target: Dictionary) -> String:
 		if id == 5 and not state in ["昏迷", "举手"]: return "须先制服目标"
 		if id != 5 and state in ["昏迷", "举手"]: return "目标已被制服，请逮捕"
 		if id == 10 and int(cop["ammo"]) <= 0: return "没有弹药"
-	# Explicit provisional ranges; not represented as the original weapon stats.
-	var reach := 8.0 if id == 10 else (4.0 if id == 14 else (3.0 if id == 3 else 1.45))
+	# Glock uses the source 11-cell range; other bank interactions are simplified.
+	var reach := 11.0 if id == 10 else (4.0 if id == 14 else (3.0 if id == 3 else 1.45))
 	if Vector2(origin).distance_to(Vector2(tile)) > reach: return "距离太远，先靠近"
+	if id==33: return "" if _interaction_line(origin,tile) else "墙壁或关闭门窗阻挡"
 	if not _clear_line(origin, tile): return "墙壁或关闭门窗阻挡"
 	return ""
+
+func _interaction_line(a: Vector2i,b: Vector2i) -> bool:
+	if a==b: return true
+	if Vector2(a-b).length()>1.45: return false
+	var allowed: Array=[0,2,3,4,5,9,13,14]
+	if a.x==b.x or a.y==b.y: return NAV.edge_type(NAV.edge_index(a,b),grid_edges,opened_edges) in allowed
+	for corner in [Vector2i(a.x,b.y),Vector2i(b.x,a.y)]:
+		if NAV.edge_type(NAV.edge_index(a,corner),grid_edges,opened_edges) in allowed and NAV.edge_type(NAV.edge_index(corner,b),grid_edges,opened_edges) in allowed: return true
+	return false
 
 func _clear_line(a: Vector2i, b: Vector2i) -> bool:
 	# Conservative grid sight check. Covers walls/closed openings; full original
@@ -702,6 +786,7 @@ func _perform_action(id: int, target: Dictionary) -> void:
 	if not reason.is_empty():
 		_show_notice(reason)
 		return
+	if id==60: _close_menu();_observe_room(target.tile);return
 	var actor := selected_cop
 	var tile: Vector2i = target["tile"]
 	var cop: Dictionary = cops[actor]
@@ -747,6 +832,12 @@ func _perform_action(id: int, target: Dictionary) -> void:
 			guards[int(target["index"])]["state"] = {1: "昏迷", 3: "昏迷", 5: "已逮捕", 10: "倒地", 14: "举手"}[id]
 			if id == 10: cop["ammo"] -= 1
 		55: hostages[int(target["index"])]["state"] = "已获救"
+		35:
+			cops[int(target.index)].hp=3
+			cop.medkits-=1
+			healed_cops[actor]=true
+		11: cop.ammo=9
+	if id==38 and int(target.edge)==2943 and not shootout_occurred: _play_scripted_shootout()
 	completed_actions[Vector4i(actor, id, tile.x, tile.y)] = true
 	_play_action_sound(id, 9 if target["kind"] == "window" else 0)
 	_sync_world()
@@ -754,6 +845,7 @@ func _perform_action(id: int, target: Dictionary) -> void:
 	if generation != mission_generation: return
 	action_busy = false
 	_show_notice("%s已完成%s。可以继续选人或选择其他目标。" % [CARD_NAMES[actor + 1], ACTION_NAMES.get(id, "互动")])
+	_check_completion()
 
 func _blocked_for_move() -> Dictionary:
 	var blocked := super._blocked_for_move()
@@ -769,6 +861,8 @@ func _end_turn() -> void:
 		return
 	_close_menu()
 	super._end_turn()
+	sniper_cooldown=maxi(0,sniper_cooldown-1)
+	if bank_world.scout_mesh!=null: bank_world.scout_mesh.hide()
 	if turn_banner_tween != null: turn_banner_tween.kill()
 	turn_banner.text = "回合 %d" % turn_number
 	turn_banner.modulate.a = 1.0
@@ -797,6 +891,7 @@ func _locate_guidance() -> void:
 	_close_menu()
 	var actor := int(recommendation.get("actor", -1))
 	if actor >= 0: selected_cop = actor
+	elif recommendation.get("target",{}).get("kind","")=="sniper": _select_cop(-1)
 	var tile: Vector2i = recommendation.get("tile", Vector2i(-1, -1))
 	if _inside(tile):
 		# Keep both the officer and this turn's destination in view.
@@ -924,7 +1019,7 @@ func _update_ui() -> void:
 	objective_label.text = "%s · AP %d/2 · 回合 %d\n选人 → 点击目标 → 选择动作\n逮捕 %d/%d · 解救 %d/%d · F1 帮助" % [CARD_NAMES[selected_cop + 1], cop["ap"], turn_number, arrested, guards.size(), rescued, hostages.size()]
 	if guide_enabled:
 		var actor := int(recommendation.get("actor", -1))
-		var actor_name: String = CARD_NAMES[actor + 1] if actor >= 0 else "说明"
+		var actor_name: String = CARD_NAMES[actor + 1] if actor >= 0 else CARD_NAMES[0]
 		objective_label.text = "建议：%s · %s\n%s\n灰蓝区 1 AP · 灰粉区 2 AP" % [actor_name, recommendation.get("heading", "自由行动"), recommendation.get("text", "")]
 		if actor >= 0 and actor != selected_cop:
 			objective_label.text += "\n先按空格切换到%s并定位。" % actor_name
@@ -937,7 +1032,7 @@ func _update_ui() -> void:
 	action_button.disabled = false
 	ammo_label.text = str(cop["ammo"])
 	for i in range(4):
-		var active := i == selected_cop + 1
+		var active := i == 0 if sniper_active else i == selected_cop + 1
 		card_portraits[i].modulate = Color.WHITE if active else Color(0.68, 0.63, 0.55, 0.74)
 		cop_cards[i].add_theme_stylebox_override("normal", _hud_style(Color("#f1cd3b") if active else Color("#211d19")))
 		if i > 0: card_labels[i].text = "%s  %d AP" % [CARD_NAMES[i], cops[i - 1]["ap"]]

@@ -1,5 +1,14 @@
 extends RefCounted
 
+# Do not restart a layout tween on every gameplay refresh.
+static func target(control: Control, channel: String, property: NodePath, value: Variant, duration := .18) -> void:
+	var key := "ui_target_"+channel
+	if control.has_meta(key) and control.get_meta(key)==value: return
+	var first := not control.has_meta(key)
+	control.set_meta(key,value)
+	if first: control.set_indexed(property,value)
+	else: animate(control,channel,property,value,duration)
+
 static func animate(control: Control, channel: String, property: NodePath, value: Variant, duration := 0.16) -> Tween:
 	# One owner per property: a quick hover/reopen replaces, never queues, motion.
 	var key := "ui_motion_"+channel

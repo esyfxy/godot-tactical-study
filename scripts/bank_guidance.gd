@@ -7,9 +7,10 @@ const NAV = preload("res://scripts/bank_navigation.gd")
 static func satisfied(game: Node, index: int, visited: Dictionary) -> bool:
 	var step: Dictionary = game.steps[index]
 	var actor := int(step["CopIndex"]) - 1
-	if actor < 0: return false
 	var tile := Vector2i(int(step["X"]), int(step["Y"]))
 	var action := int(step["AllowedAction"])
+	if actor<0: return game.scouted_rooms.has(game.room_id(tile))
+	if action==35: return game.healed_cops.has(actor)
 	if action == -1:
 		return game.cops[actor]["pos"] == tile or visited.has(Vector3i(actor, tile.x, tile.y))
 	if action == 38:
@@ -27,15 +28,19 @@ static func satisfied(game: Node, index: int, visited: Dictionary) -> bool:
 
 static func recommend(game: Node, index: int) -> Dictionary:
 	if index >= game.steps.size():
-		return {"text": "当前建议已浏览完，可继续自由操作。", "tile": Vector2i(-1, -1), "route": []}
-	var step: Dictionary = game.steps[index]
+		return game.COMPLETION.recommend(game)
+	return for_step(game,game.steps[index],index)
+
+static func for_step(game: Node,step: Dictionary,index: int=-1) -> Dictionary:
 	var actor := int(step["CopIndex"]) - 1
 	var action := int(step["AllowedAction"])
 	var tile := Vector2i(int(step["X"]), int(step["Y"]))
-	var heading := str(game.locale.get("TacticsTutorial%d" % int(step["TooltipId"]), "前进"))
+	var heading := str(step.get("heading",game.locale.get("TacticsTutorial%d" % int(step["TooltipId"]), "前进")))
 	var result := {"actor": actor, "action": action, "tile": tile, "route": [], "heading": heading}
-	if actor < 0 or action == 35:
-		result["text"] = "此建议所需系统尚未实现；可跳过。"
+	if actor < 0:
+		result["target"]={"kind":"sniper","tile":tile}
+		result["action"]=60
+		result["text"]="点击什韦茨头像，再点房间选择侦察；不消耗警员 AP。"
 		return result
 	var cop: Dictionary = game.cops[actor]
 	var origin: Vector2i = cop["pos"]
@@ -48,8 +53,18 @@ static func recommend(game: Node, index: int) -> Dictionary:
 		if hostage["state"] != "已获救": blocked[hostage["pos"]] = true
 	var target: Dictionary = {"kind": "ground", "tile": tile}
 	var opening_tiles: Array = []
-	if action == 38:
-		var edge: int = game.OPENING_EDGES_BY_STEP.get(index, -1)
+	if action==33:
+		target=game.note_target(tile)
+		tile=target.tile
+	elif action == 35:
+		var injured:=actor
+		if int(cop.hp)>=3:
+			for i in range(game.cops.size()):
+				if int(game.cops[i].hp)<3: injured=i;break
+		target={"kind":"cop","index":injured,"tile":game.cops[injured].pos}
+		tile=target.tile
+	elif action == 38:
+		var edge: int = step.get("edge",game.OPENING_EDGES_BY_STEP.get(index, -1))
 		for kind in ["door", "window"]:
 			for data in game.source_data["doors" if kind == "door" else "windows"]:
 				if int(data["EdgeIndex"]) == edge: target = game._opening_target(data, kind)
@@ -68,11 +83,12 @@ static func recommend(game: Node, index: int) -> Dictionary:
 	var search := NAV.search(origin, 150.0, game.cells, game.grid_edges, game.opened_edges, blocked)
 	var destination := tile
 	if action != -1:
-		var reach := 8.0 if action == 10 else (4.0 if action == 14 else (3.0 if action == 3 else 1.45))
+		var reach := 11.0 if action == 10 else (4.0 if action == 14 else (3.0 if action == 3 else 1.45))
 		var best_cost := INF
 		destination = Vector2i(-1, -1)
 		for candidate in search["costs"]:
-			var usable: bool = candidate in opening_tiles if action == 38 else (Vector2(candidate).distance_to(Vector2(tile)) <= reach and game._clear_line(candidate, tile))
+			var line: bool=game._interaction_line(candidate,tile) if action==33 else game._clear_line(candidate,tile)
+			var usable: bool = candidate in opening_tiles if action == 38 else (Vector2(candidate).distance_to(Vector2(tile)) <= reach and line)
 			if usable and float(search["costs"][candidate]) < best_cost:
 				best_cost = float(search["costs"][candidate])
 				destination = candidate
